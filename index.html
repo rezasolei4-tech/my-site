@@ -21,11 +21,11 @@
         .empty-space { background: transparent; }
         .cell { background-color: white; border-radius: 50%; border: 1px solid #333; display: flex; align-items: center; justify-content: center; position: relative; }
         
-        /* خونه شروع (رنگی) */
+        /* 🚨 رنگ خونه‌های شروع */
         .cell.red-start { background-color: #ff4444; }
         .cell.blue-start { background-color: #4444ff; }
         
-        /* خونه‌های نهایی (Home) */
+        /* 🚨 رنگ خونه‌های نهایی (Home) */
         .cell.red-home { background-color: #ff9999; border: 2px solid #ff0000; }
         .cell.blue-home { background-color: #9999ff; border: 2px solid #0000ff; }
         
@@ -102,25 +102,33 @@
 
         let pieces = { 1: [-1, -1, -1, -1], 2: [-1, -1, -1, -1] };
 
-        // 🚨 مسیرها: حالا نقطه صفر (شروع) دقیقا همون خونه سفید کنار خونه رنگیه
-        // قرمز: خونه سفید بالا (47) رو به عنوان شروع در نظر میگیریم
+        // 🚨 تعریف دقیق ایندکس‌های مسیر
+        // (شروع از 1 به معنای خونه سفید بعد از خونه رنگی است)
         const pathP1 = [
-            47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 
-            64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 
-            77, 78, 79, 80, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46
+            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, // ردیف بالا
+            18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, // ستون راست
+            31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, // ردیف پایین
+            44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56  // ستون چپ
         ];
         
-        // آبی: خونه سفید پایین (72) رو به عنوان شروع در نظر میگیریم
         const pathP2 = [
-            72, 73, 74, 75, 76, 77, 78, 79, 80, 3, 4, 5, 6, 7, 8, 9, 10, 11, 
-            12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71
+            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 
+            18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 
+            31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 
+            44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56
         ];
 
         // مسیرهای نهایی (Home Stretch)
         const homeP1 = [13, 22, 31, 40]; 
         const homeP2 = [67, 58, 49, 40]; 
 
-        const totalPathLength = pathP1.length + homeP1.length - 1; 
+        // 🚨 طول کل مسیر: 57 خونه
+        const totalPathLength = 57; 
+
+        // 🚨 ایندکس دقیق خونه‌های شروع و نهایی در گرید 9x9
+        const redStartIndex = 4;  // بالای ستون وسط
+        const blueStartIndex = 76; // پایین ستون وسط
+        const redFinalIndex = 40;  // مرکز
 
         const board = document.getElementById('game-board');
 
@@ -138,16 +146,16 @@
                 cell.dataset.index = i;
                 
                 // 🚨 خونه رنگی شروع قرمز (بالای ستون وسط)
-                if (i === 48) cell.classList.add('red-start'); 
+                if (i === redStartIndex) cell.classList.add('red-start'); 
                 // 🚨 خونه رنگی شروع آبی (پایین ستون وسط)
-                if (i === 71) cell.classList.add('blue-start');
+                if (i === blueStartIndex) cell.classList.add('blue-start');
                 
-                // خونه نهایی قرمز
-                if (homeP1.includes(i) && i !== 40) cell.classList.add('red-home');
-                // خونه نهایی آبی
-                if (homeP2.includes(i) && i !== 40) cell.classList.add('blue-home');
+                // خونه نهایی قرمز (ستون وسط، ۳ خونه بالای مرکز)
+                if (homeP1.includes(i) && i !== redFinalIndex) cell.classList.add('red-home');
+                // خونه نهایی آبی (ستون وسط، ۳ خونه پایین مرکز)
+                if (homeP2.includes(i) && i !== redFinalIndex) cell.classList.add('blue-home');
                 
-                if (i === 40) { cell.style.background = 'linear-gradient(135deg, #ff9999 50%, #9999ff 50%)'; }
+                if (i === redFinalIndex) { cell.style.background = 'linear-gradient(135deg, #ff9999 50%, #9999ff 50%)'; }
             }
             board.appendChild(cell);
         }
@@ -246,9 +254,11 @@
             if (!isMyTurn || !hasRolled) return;
             const currentPos = pieces[myPlayerNumber][pieceIndex];
 
+            // 🚨 اگر مهره توی خونه اولیه است و ۶ نیاورده، اجازه نده
             if (currentPos === -1 && currentDice !== 6) return; 
             if (currentPos !== -1 && currentPos !== totalPathLength && currentPos + currentDice > totalPathLength) return; 
 
+            // 🚨 اگر ۶ آورد و مهره توی خونه بود، مهره رو روی خونه شروع (0) بذار
             let newPos = (currentPos === -1) ? 0 : currentPos + currentDice;
             if (newPos > totalPathLength) newPos = totalPathLength;
 
@@ -304,8 +314,9 @@
                 pieces[p].forEach((pos, index) => {
                     if (pos !== -1) {
                         let cellIndex;
+                        // 🚨 منطق پیدا کردن خونه بر اساس مسیر
                         if (pos >= totalPathLength) {
-                            cellIndex = 40; // مرکز
+                            cellIndex = redFinalIndex; // مرکز
                         } else if (pos >= currentPath.length) {
                             cellIndex = currentHome[pos - currentPath.length];
                         } else {
