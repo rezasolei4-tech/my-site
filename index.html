@@ -155,15 +155,12 @@
             }
         });
 
+        // ⚠️ دریافت تغییر نوبت
         socket.on('turn-changed', (data) => {
             if (data.nextTurn === myId) {
                 isMyTurn = true;
                 hasRolled = false;
-                if (data.bonus) {
-                    document.getElementById('turn-text').innerText = "شما ۶ آوردید! دوباره تاس بیندازید.";
-                } else {
-                    document.getElementById('turn-text').innerText = "نوبت شماست! تاس بیندازید.";
-                }
+                document.getElementById('turn-text').innerText = "نوبت شماست! تاس بیندازید.";
                 document.getElementById('roll-btn').disabled = false;
                 document.getElementById('roll-btn').innerText = "انداختن تاس";
             } else {
@@ -191,7 +188,6 @@
             
             socket.emit('dice-rolled', { dice: currentDice });
 
-            // آیا حرکت ممکن است؟
             let canMove = false;
             const myPieces = pieces[myPlayerNumber];
             
@@ -210,7 +206,6 @@
                 document.getElementById('game-msg').innerText = `شما ${currentDice} آوردید. یک مهره انتخاب کنید.`;
                 updateUI(); 
             } else {
-                // اگر حرکت ممکن نیست، به سرور میگیم نوبت تموم شد (با ارسال تاس غیر ۶)
                 document.getElementById('game-msg').innerText = `شما ${currentDice} آوردید. حرکتی ممکن نیست!`;
                 setTimeout(() => { 
                     socket.emit('end-turn', { dice: 1 }); 
@@ -223,7 +218,6 @@
             document.getElementById('game-msg').innerText = `حریف ${data.dice} آورد.`;
         });
 
-        // ⚠️ منطق حرکت
         function selectPiece(pieceIndex) {
             if (!isMyTurn || !hasRolled) return;
             const currentPos = pieces[myPlayerNumber][pieceIndex];
@@ -238,17 +232,13 @@
             pieces[myPlayerNumber][pieceIndex] = newPos;
             socket.emit('make-move', { player: myPlayerNumber, pieceIndex: pieceIndex, newPos: newPos });
 
-            // چک کردن برنده شدن
-            if (newPos === totalPathLength) {
-                alert("🎉 تبریک! شما برنده شدید!");
-                // بستن بازی یا هر کار دیگه
-            }
+            if (newPos === totalPathLength) alert("🎉 تبریک! شما برنده شدید!");
 
-            // ⚠️ پایان نوبت: اگر ۶ نیاورده باشه، نوبت عوض میشه
+            // ⚠️ ارسال نتیجه نوبت
             if (currentDice === 6) {
-                socket.emit('end-turn', { dice: 6 }); // نوبت جایزه
+                socket.emit('end-turn', { dice: 6 }); 
             } else {
-                socket.emit('end-turn', { dice: 1 }); // نوبت به حریف
+                socket.emit('end-turn', { dice: 1 }); 
             }
         }
 
