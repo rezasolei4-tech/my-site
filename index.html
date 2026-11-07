@@ -22,7 +22,7 @@
         
         .cell { background-color: white; border-radius: 50%; border: 1px solid #333; display: flex; align-items: center; justify-content: center; position: relative; color: #555; font-size: 12px; font-weight: bold;}
         
-        /* 🚨 رنگ خونه‌های شروع و نهایی */
+        /* رنگ خونه‌های شروع و نهایی */
         .cell.red-start { background-color: #ff4444; color: white;}
         .cell.blue-start { background-color: #4444ff; color: white;}
         .cell.red-home { background-color: #ff9999; border: 2px solid #ff0000; }
@@ -104,10 +104,10 @@
 
         const deletedCells = [37, 38, 39, 40, 41, 42, 43];
 
-        // 🚨 مسیر قرمز دقیقاً طبق لیست شما
+        // مسیر قرمز
         const pathP1 = [4, 3, 12, 21, 30, 29, 28, 27, 36, 45, 46, 47, 48, 57, 66, 75, 76, 77, 68, 59, 50, 51, 52, 53, 44, 35, 34, 33, 32, 23, 14, 5, 13, 22, 31];
         
-        // 🚨 مسیر آبی دقیقاً طبق لیست شما (بدون ۷۶ اولی)
+        // مسیر آبی (بدون ۷۶ اولی)
         const pathP2 = [77, 68, 59, 50, 51, 52, 53, 44, 35, 34, 33, 32, 23, 14, 5, 4, 3, 12, 21, 30, 29, 28, 27, 36, 45, 46, 47, 48, 57, 66, 75, 67, 58, 49];
 
         const startPointP1 = 4;
@@ -134,9 +134,7 @@
                 if (i === startPointP1) cell.classList.add('red-start'); 
                 if (i === startPointP2) cell.classList.add('blue-start');
                 
-                // 🚨 خونه نهایی قرمز: ۳۱ (آخرین خونه لیست)
                 if (i === 31) cell.classList.add('red-home');
-                // 🚨 خونه نهایی آبی: ۴۹ (آخرین خونه لیست)
                 if (i === 49) cell.classList.add('blue-home'); 
             }
             board.appendChild(cell);
@@ -170,6 +168,12 @@
 
         socket.on('game-over', (data) => {
             alert(`بازی تمام شد! ${data.winner === myId ? 'شما برنده شدید! 🎉' : 'حریف برنده شد! 😢'}`);
+            location.reload();
+        });
+
+        // 🚨 مدیریت قطع شدن حریف
+        socket.on('opponent-disconnected', () => {
+            alert("حریف از بازی خارج شد! شما برنده شدید. 🎉");
             location.reload();
         });
 
@@ -293,7 +297,6 @@
                 pieces[p].forEach((pos, index) => {
                     if (pos !== -1) {
                         let cellIndex;
-                        // 🚨 پیدا کردن خونه بر اساس ایندکس در مسیر
                         if (pos >= currentPath.length) {
                             cellIndex = currentPath[currentPath.length - 1]; 
                         } else {
