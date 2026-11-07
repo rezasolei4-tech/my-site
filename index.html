@@ -49,14 +49,30 @@
         #turn-text { font-size: 16px; font-weight: bold; color: #fbbf24; margin-bottom: 10px; text-align: center; }
         #game-msg { color: #94a3b8; font-size: 14px; margin-bottom: 10px; text-align: center; min-height: 20px; }
 
-        /* 🚨 دکمه میکروفون همیشه روی صفحه */
-        #mic-btn {
-            position: fixed; bottom: 20px; left: 20px; width: 60px; height: 60px;
-            border-radius: 50%; font-size: 30px; background: #334155; border: 2px solid #94a3b8;
-            display: flex; align-items: center; justify-content: center; z-index: 100;
-            cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        /* 🚨 استایل دکمه‌های پایین صفحه */
+        #controls {
+            position: fixed; bottom: 20px; left: 20px; display: flex; gap: 10px; z-index: 100;
         }
-        #mic-btn.active { background: #ef4444; border-color: #fca5a5; animation: pulse 1.5s infinite; }
+        .control-btn {
+            width: 50px; height: 50px; border-radius: 50%; font-size: 24px;
+            background: #334155; border: 2px solid #94a3b8; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+        .control-btn.active { background: #ef4444; border-color: #fca5a5; animation: pulse 1.5s infinite; }
+
+        /* 🚨 استایل کادر تماس تصویری */
+        #video-container {
+            position: fixed; top: 10px; right: 10px; width: 120px; height: 160px;
+            background: #000; border-radius: 10px; overflow: hidden;
+            display: flex; flex-direction: column; border: 2px solid #06C755;
+            z-index: 200; box-shadow: 0 4px 15px rgba(0,0,0,0.7);
+        }
+        /* تصویر حریف (بالا) */
+        #remote-video { width: 100%; height: 50%; object-fit: cover; background: #1e293b; border-bottom: 1px solid #334155; }
+        /* تصویر خودم (پایین) */
+        #local-video { width: 100%; height: 50%; object-fit: cover; background: #1e293b; transform: scaleX(-1); /* آینه کردن تصویر خودم */ }
+        
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
     </style>
 </head>
@@ -99,9 +115,17 @@
         </div>
     </div>
 
-    <!-- 🚨 دکمه میکروفون (بدون کلاس hidden) -->
-    <div id="mic-btn" onclick="toggleMic()">🎤</div>
-    <audio id="remote-audio" autoplay></audio>
+    <!-- 🚨 کادر تماس تصویری (مخفی در ابتدا) -->
+    <div id="video-container" class="hidden">
+        <video id="remote-video" autoplay playsinline></video>
+        <video id="local-video" autoplay playsinline muted></video>
+    </div>
+
+    <!-- 🚨 دکمه‌های کنترل (میکروفون و دوربین) -->
+    <div id="controls">
+        <div id="mic-btn" class="control-btn" onclick="toggleMic()" title="میکروفون">🎤</div>
+        <div id="cam-btn" class="control-btn" onclick="toggleCam()" title="دوربین">📷</div>
+    </div>
 
     <script>
         const socket = io("https://manch-server.onrender.com");
@@ -123,6 +147,7 @@
 
         const board = document.getElementById('game-board');
 
+        // ساخت زمین
         for (let i = 0; i < 81; i++) {
             const cell = document.createElement('div');
             const row = Math.floor(i / 9);
@@ -144,6 +169,7 @@
             board.appendChild(cell);
         }
 
+        // --- بخش شبکه و اتصال ---
         socket.on('your-id', (id) => { myId = id; document.getElementById('my-id').innerText = "آیدی شما: " + id; });
         function sendRequest() { socket.emit('request-connect', document.getElementById('opponent-id').value.trim()); }
         socket.on('incoming-request', (data) => {
@@ -195,6 +221,7 @@
             updateUI();
         });
 
+        // --- تاس و حرکت ---
         function updateDiceDisplay(number) {
             const dots = ['d1','d2','d3','d4','d5','d6','d7','d8','d9'];
             dots.forEach(d => document.getElementById(d).classList.remove('visible'));
@@ -321,16 +348,70 @@
         }
 
         // ==========================================
-        // 🎙️ بخش WebRTC (تماس صوتی Peer-to-Peer)
+        // 🎥 بخش WebRTC (تماس تصویری Peer-to-Peer)
         // ==========================================
         let localStream = null;
         let peerConnection = null;
+        let isCamActive = false;
         let isMicActive = false;
 
         const configuration = { 
             iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] 
         };
 
+        // روشن/خاموش کردن دوربین
+        async function toggleCam() {
+            const camBtn = document.getElementById('cam-btn');
+            const videoContainer = document.getElementById('video-container');
+            const localVideo = document.getElementById('local-video');
+
+            if (!isCamActive) {
+                try {
+                    // درخواست دسترسی به دوربین و میکروفون همزمان
+                    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                    
+                    localVideo.srcObject = localStream;
+                    videoContainer.classList.remove('hidden');
+                    camBtn.classList.add('active');
+                    isCamActive = true;
+                    isMicActive = true; // چون میکروفون هم روشن شده
+                    document.getElementById('mic-btn').classList.add('active');
+
+                    if (!peerConnection) createPeerConnection();
+
+                    // اضافه کردن ویدیو و صدا به اتصال
+                    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+                    // شروع تماس
+                    const offer = await peerConnection.createOffer();
+                    await peerConnection.setLocalDescription(offer);
+                    socket.emit('webrtc-signal', { type: 'offer', sdp: offer });
+
+                } catch (err) {
+                    alert("دسترسی به دوربین امکان‌پذیر نیست. لطفاً دسترسی را بررسی کنید.");
+                    console.error(err);
+                }
+            } else {
+                // خاموش کردن دوربین و میکروفون
+                if (localStream) {
+                    localStream.getTracks().forEach(track => track.stop());
+                }
+                localStream = null;
+                localVideo.srcObject = null;
+                videoContainer.classList.add('hidden');
+                camBtn.classList.remove('active');
+                isCamActive = false;
+                isMicActive = false;
+                document.getElementById('mic-btn').classList.remove('active');
+                
+                if (peerConnection) {
+                    peerConnection.close();
+                    peerConnection = null;
+                }
+            }
+        }
+
+        // روشن/خاموش کردن میکروفون (اگر دوربین روشن نباشه)
         async function toggleMic() {
             const micBtn = document.getElementById('mic-btn');
 
@@ -338,7 +419,6 @@
                 try {
                     localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                     micBtn.classList.add('active');
-                    micBtn.innerText = '🔴'; 
                     isMicActive = true;
 
                     if (!peerConnection) createPeerConnection();
@@ -350,8 +430,7 @@
                     socket.emit('webrtc-signal', { type: 'offer', sdp: offer });
 
                 } catch (err) {
-                    alert("دسترسی به میکروفون امکان‌پذیر نیست. لطفاً دسترسی را بررسی کنید.");
-                    console.error(err);
+                    alert("دسترسی به میکروفون امکان‌پذیر نیست.");
                 }
             } else {
                 if (localStream) {
@@ -359,7 +438,6 @@
                 }
                 localStream = null;
                 micBtn.classList.remove('active');
-                micBtn.innerText = '🎤';
                 isMicActive = false;
                 
                 if (peerConnection) {
@@ -372,8 +450,9 @@
         function createPeerConnection() {
             peerConnection = new RTCPeerConnection(configuration);
 
+            // دریافت تصویر و صدای حریف
             peerConnection.ontrack = (event) => {
-                document.getElementById('remote-audio').srcObject = event.streams[0];
+                document.getElementById('remote-video').srcObject = event.streams[0];
             };
 
             peerConnection.onicecandidate = (event) => {
@@ -383,6 +462,7 @@
             };
         }
 
+        // دریافت پیام‌های WebRTC از سرور
         socket.on('webrtc-signal', async (data) => {
             if (!peerConnection) createPeerConnection();
 
@@ -392,9 +472,8 @@
                 await peerConnection.setLocalDescription(answer);
                 socket.emit('webrtc-signal', { type: 'answer', sdp: answer });
                 
-                if (!isMicActive) {
-                    document.getElementById('mic-btn').innerText = '🎤 (تماس ورودی)';
-                }
+                // نمایش کادر ویدیو وقتی تماس ورودی داریم
+                document.getElementById('video-container').classList.remove('hidden');
             } 
             else if (data.type === 'answer') {
                 await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
