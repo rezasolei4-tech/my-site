@@ -62,11 +62,9 @@ io.on('connection', (socket) => {
     }
   });
 
-  // ⚠️ مدیریت نوبت و برنده شدن
   socket.on('end-turn', (data) => {
     for (const roomId in rooms) {
       if (roomId.includes(shortId)) {
-        // اگر کسی برنده شد، بازی رو تموم کن
         if (data && data.winner) {
             io.to(roomId).emit('game-over', { winner: shortId });
             break;
@@ -84,7 +82,22 @@ io.on('connection', (socket) => {
     }
   });
 
+  // 🚨 پاکسازی کامل وقتی کاربر قطع می‌شود
   socket.on('disconnect', () => {
+    console.log(`کاربر ${shortId} قطع شد.`);
+    
+    // 1. پیدا کردن و پاک کردن اتاق‌هایی که این کاربر در آن‌ها بوده
+    for (const roomId in rooms) {
+      if (roomId.includes(shortId)) {
+        // به بازیکن دیگر اطلاع بده که حریف قطع شده
+        socket.to(roomId).emit('opponent-disconnected');
+        // اتاق را از حافظه پاک کن
+        delete rooms[roomId];
+        console.log(`اتاق ${roomId} به دلیل خروج بازیکن پاک شد.`);
+      }
+    }
+    
+    // 2. پاک کردن آیدی کاربر از لیست آنلاین‌ها
     delete onlineUsers[shortId];
   });
 });
