@@ -4,76 +4,106 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>بازی منچ آنلاین (P2P)</title>
-    <!-- این خط کتابخانه Socket.io را از سرور Render شما لود می‌کند -->
     <script src="https://manch-server.onrender.com/socket.io/socket.io.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: Tahoma, sans-serif; background: linear-gradient(135deg, #1a1a2e, #16213e); color: white; text-align: center; padding: 20px; min-height: 100vh; }
         h1 { color: #06C755; margin-bottom: 20px; font-size: 28px; }
         .card { background: rgba(30, 41, 59, 0.8); padding: 25px; border-radius: 15px; max-width: 400px; margin: 0 auto; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        .id-box { background: #0f172a; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #06C755; font-size: 18px; font-weight: bold; color: #06C755; }
-        input { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; text-align: center; font-size: 16px; }
-        button.primary { width: 100%; background: #06C755; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .id-box { background: #0f172a; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #06C755; font-size: 24px; font-weight: bold; color: #06C755; letter-spacing: 2px; }
+        input { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; text-align: center; font-size: 18px; letter-spacing: 1px; }
+        button.primary { width: 100%; background: #06C755; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-bottom: 10px; }
         button.primary:hover { background: #05a648; }
-        #status { font-size: 14px; color: #94a3b8; margin-top: 15px; }
-        /* استایل‌های مربوط به صفحه بازی (در صورت نیاز) */
-        .board { display: none; grid-template-columns: repeat(5, 1fr); gap: 5px; max-width: 300px; margin: 20px auto; }
-        .cell { background: #1e293b; border-radius: 5px; height: 50px; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 1px solid #334155; }
-        .cell.red { background: #ef4444; }
+        button.danger { background: #ef4444; }
+        #status { font-size: 14px; color: #94a3b8; margin-top: 15px; min-height: 20px; }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
 
     <h1>🎲 بازی منچ آنلاین</h1>
 
-    <div class="card">
+    <div class="card" id="main-menu">
         <h2>🔗 اتصال به حریف</h2>
         <p>آیدی اختصاصی شما:</p>
         <div id="my-id" class="id-box">در حال ساخت...</div>
 
-        <p>آیدی حریف را وارد کنید:</p>
-        <input type="text" id="opponent-id" placeholder="مثلا player-12345">
-        
-        <button class="primary" onclick="connectToOpponent()">اتصال به حریف</button>
-        
+        <div id="connect-section">
+            <p>آیدی حریف را وارد کنید:</p>
+            <input type="text" id="opponent-id" placeholder="مثلا 1234" maxlength="4">
+            <button class="primary" onclick="sendRequest()">ارسال درخواست</button>
+        </div>
+
+        <div id="accept-section" class="hidden">
+            <p style="color: #fbbf24; margin-bottom: 10px;">یک درخواست از طرف <span id="req-id" style="font-weight: bold; font-size: 18px;"></span> دریافت شد!</p>
+            <button class="primary" onclick="acceptRequest()">قبول درخواست</button>
+            <button class="primary danger" onclick="rejectRequest()">رد درخواست</button>
+        </div>
+
         <div id="status">در حال آماده‌سازی...</div>
     </div>
 
-    <script>
-        // ⚠️ اتصال به سرور آنلاین شما در Render
-        const socket = io("https://manch-server.onrender.com");
+    <div id="game-area" class="hidden">
+        <h2>بازی شروع شد!</h2>
+        <p>اینجا می‌توانید صفحه بازی (صفحه شطرنجی) را اضافه کنید.</p>
+    </div>
 
-        // وقتی به سرور وصل شدیم
+    <script>
+        const socket = io("https://manch-server.onrender.com");
+        let myId = null;
+        let requesterId = null;
+
         socket.on('connect', () => {
-            document.getElementById('my-id').innerText = socket.id;
-            document.getElementById('status').innerText = "به سرور متصل شدید. منتظر حریف...";
+            document.getElementById('status').innerText = "به سرور متصل شدید. در انتظار آیدی...";
             document.getElementById('status').style.color = "#06C755";
         });
 
-        // وقتی سرور قطع شد
-        socket.on('disconnect', () => {
-            document.getElementById('status').innerText = "ارتباط با سرور قطع شد.";
-            document.getElementById('status').style.color = "#ef4444";
+        // دریافت آیدی کوتاه از سرور
+        socket.on('your-id', (id) => {
+            myId = id;
+            document.getElementById('my-id').innerText = id;
+            document.getElementById('status').innerText = "آماده برای بازی. آیدی خود را به دوستتان بدهید.";
         });
 
-        // تابعی برای زمانی که دکمه اتصال زده می‌شود
-        function connectToOpponent() {
+        function sendRequest() {
             const opponentId = document.getElementById('opponent-id').value.trim();
             if (!opponentId) {
                 alert("لطفاً آیدی حریف را وارد کنید.");
                 return;
             }
-            
-            // ارسال درخواست به سرور برای اتصال به اتاق
-            socket.emit('join-game', opponentId);
-            document.getElementById('status').innerText = "درخواست اتصال ارسال شد...";
+            socket.emit('request-connect', opponentId);
+            document.getElementById('status').innerText = "در حال ارسال درخواست...";
         }
 
-        // وقتی حریف به بازی متصل شد
-        socket.on('opponent-joined', (opponentSocketId) => {
-            document.getElementById('status').innerText = `حریف (${opponentSocketId}) متصل شد! بازی شروع می‌شود.`;
-            document.getElementById('status').style.color = "#06C755";
-            // اینجا می‌توانید کدهای نمایش صفحه بازی را فعال کنید
+        // دریافت درخواست از حریف
+        socket.on('incoming-request', (data) => {
+            requesterId = data.from;
+            document.getElementById('req-id').innerText = data.from;
+            document.getElementById('connect-section').classList.add('hidden');
+            document.getElementById('accept-section').classList.remove('hidden');
+            document.getElementById('status').innerText = "منتظر پاسخ شما...";
+        });
+
+        function acceptRequest() {
+            socket.emit('accept-connect', requesterId);
+        }
+
+        function rejectRequest() {
+            document.getElementById('accept-section').classList.add('hidden');
+            document.getElementById('connect-section').classList.remove('hidden');
+            document.getElementById('status').innerText = "درخواست رد شد.";
+            requesterId = null;
+        }
+
+        // شروع بازی برای هر دو نفر
+        socket.on('game-started', (data) => {
+            document.getElementById('main-menu').classList.add('hidden');
+            document.getElementById('game-area').classList.remove('hidden');
+        });
+
+        socket.on('error-msg', (msg) => {
+            alert(msg);
+            document.getElementById('status').innerText = msg;
         });
     </script>
 </body>
