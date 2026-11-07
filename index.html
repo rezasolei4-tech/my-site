@@ -16,7 +16,6 @@
         button { background: #06C755; color: white; border: none; padding: 10px; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; width: 100%; transition: 0.2s; }
         button:disabled { background: #555; cursor: not-allowed; opacity: 0.7; }
 
-        /* زمین بازی */
         .board-wrapper { background: #d2a679; padding: 5px; border-radius: 10px; border: 3px solid #8b5a2b; width: 90vw; max-width: 400px; aspect-ratio: 1 / 1; margin-bottom: 15px; }
         #game-board { display: grid; grid-template-columns: repeat(9, 1fr); grid-template-rows: repeat(9, 1fr); gap: 2px; width: 100%; height: 100%; }
         .empty-space { background: transparent; }
@@ -25,19 +24,16 @@
         .cell.red-start { background-color: #ff4444; }
         .cell.blue-start { background-color: #4444ff; }
         
-        /* مهره‌ها */
         .piece { width: 85%; height: 85%; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 5px rgba(0,0,0,0.5); position: absolute; z-index: 10; cursor: pointer; }
         .piece.p1 { background-color: #ff0000; }
         .piece.p2 { background-color: #0000ff; }
         .piece.highlight { border: 3px solid yellow; box-shadow: 0 0 15px yellow; transform: scale(1.1); }
 
-        /* تاس */
         .dice-container { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; max-width: 400px; }
         .dice { width: 60px; height: 60px; background: white; border-radius: 10px; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); padding: 8px; gap: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
         .dot { background: black; border-radius: 50%; width: 100%; height: 100%; display: none; }
         .dot.visible { display: block; }
 
-        /* مهره‌های خونه */
         .home-pieces { display: flex; justify-content: center; gap: 15px; margin-bottom: 10px; }
         .home-piece { width: 35px; height: 35px; border-radius: 50%; border: 2px solid #fff; transition: 0.2s; }
         .home-piece.p1 { background-color: #ff0000; }
@@ -69,9 +65,7 @@
     <div id="game-area" class="hidden" style="display: flex; flex-direction: column; align-items: center; width: 100%;">
         <div id="turn-text">نوبت شماست!</div>
         
-        <!-- مهره‌های خونه بازیکن ۱ (قرمز) -->
         <div class="home-pieces" id="home-pieces-p1"></div>
-        <!-- مهره‌های خونه بازیکن ۲ (آبی) -->
         <div class="home-pieces" id="home-pieces-p2"></div>
 
         <div class="board-wrapper">
@@ -97,27 +91,23 @@
         let currentDice = 0;
         let hasRolled = false; 
 
-        // وضعیت مهره‌ها: -1 = توی خونه، 0 تا 51 = روی زمین، 52 تا 55 = خونه برنده شدن
         let pieces = {
-            1: [-1, -1, -1, -1], // قرمز
-            2: [-1, -1, -1, -1]  // آبی
+            1: [-1, -1, -1, -1],
+            2: [-1, -1, -1, -1] 
         };
 
-        // مسیر حرکت (۵۲ خونه دور زمین)
         const path = [
-            38,39,40,41,42,43,44,45,46,47,48,49,50, // بالا
-            51,52,53,54,55,56,57,58,59,60,61,62,63, // راست
-            64,65,66,67,68,69,70,71,72,73,74,75,76, // پایین
-            77,78,79,80,3,4,5,6,7,8,9,10,11          // چپ
+            38,39,40,41,42,43,44,45,46,47,48,49,50, 
+            51,52,53,54,55,56,57,58,59,60,61,62,63, 
+            64,65,66,67,68,69,70,71,72,73,74,75,76, 
+            77,78,79,80,3,4,5,6,7,8,9,10,11          
         ];
 
-        // مسیر اختصاصی برای رسیدن به مرکز (برای سادگی برای هر دو یکسان)
-        const homeStretch = [12, 21, 30, 39, 48]; // 5 خانه به سمت مرکز
+        const homeStretch = [12, 21, 30, 39, 48]; 
         const totalPathLength = path.length + homeStretch.length - 1; // 56
 
         const board = document.getElementById('game-board');
 
-        // ساخت زمین
         for (let i = 0; i < 81; i++) {
             const cell = document.createElement('div');
             const row = Math.floor(i / 9);
@@ -136,7 +126,6 @@
             board.appendChild(cell);
         }
 
-        // --- شبکه ---
         socket.on('your-id', (id) => { myId = id; document.getElementById('my-id').innerText = "آیدی شما: " + id; });
         function sendRequest() { socket.emit('request-connect', document.getElementById('opponent-id').value.trim()); }
         socket.on('incoming-request', (data) => {
@@ -151,16 +140,39 @@
             document.getElementById('main-menu').classList.add('hidden');
             document.getElementById('game-area').classList.remove('hidden');
             if (data.requester === myId) {
-                myPlayerNumber = 1; isMyTurn = true;
-                document.getElementById('turn-text').innerText = "شما قرمز هستید. تاس بیندازید!";
+                myPlayerNumber = 1; 
             } else {
-                myPlayerNumber = 2; isMyTurn = false;
-                document.getElementById('turn-text').innerText = "شما آبی هستید. منتظر حریف...";
+                myPlayerNumber = 2; 
+            }
+            updateUI();
+            // نوبت اول برای کسی که درخواست داده
+            if (data.turn === myId) {
+                isMyTurn = true;
+                document.getElementById('turn-text').innerText = "شما شروع می‌کنید! تاس بیندازید.";
+                document.getElementById('roll-btn').disabled = false;
+            } else {
+                isMyTurn = false;
+                document.getElementById('turn-text').innerText = "منتظر حرکت حریف...";
+                document.getElementById('roll-btn').disabled = true;
+            }
+        });
+
+        // دریافت تغییر نوبت از سرور
+        socket.on('turn-changed', (data) => {
+            if (data.nextTurn === myId) {
+                isMyTurn = true;
+                hasRolled = false;
+                document.getElementById('turn-text').innerText = "نوبت شماست! تاس بیندازید.";
+                document.getElementById('roll-btn').disabled = false;
+                document.getElementById('roll-btn').innerText = "انداختن تاس";
+            } else {
+                isMyTurn = false;
+                document.getElementById('turn-text').innerText = "منتظر حرکت حریف...";
+                document.getElementById('roll-btn').disabled = true;
             }
             updateUI();
         });
 
-        // --- تاس ---
         function updateDiceDisplay(number) {
             const dots = ['d1','d2','d3','d4','d5','d6','d7','d8','d9'];
             dots.forEach(d => document.getElementById(d).classList.remove('visible'));
@@ -178,16 +190,15 @@
             
             socket.emit('dice-rolled', { dice: currentDice });
 
-            // آیا با این تاس می‌تونه حرکت کنه؟
             let canMove = false;
             const myPieces = pieces[myPlayerNumber];
             
             if (currentDice === 6 && myPieces.includes(-1)) {
-                canMove = true; // ۶ آورد و مهره توی خونه داره
+                canMove = true; 
             } else {
                 for (let pos of myPieces) {
                     if (pos !== -1 && pos + currentDice <= totalPathLength) {
-                        canMove = true; // مهره روی زمین داره و می‌تونه حرکت کنه
+                        canMove = true; 
                         break;
                     }
                 }
@@ -195,11 +206,13 @@
 
             if (canMove) {
                 document.getElementById('game-msg').innerText = `شما ${currentDice} آوردید. یک مهره انتخاب کنید.`;
-                updateUI(); // مهره‌های قابل حرکت رو هایلایت کن
+                updateUI(); 
             } else {
-                // اگر نمی‌تونه حرکت کنه
                 document.getElementById('game-msg').innerText = `شما ${currentDice} آوردید. حرکتی ممکن نیست!`;
-                setTimeout(() => { endTurn(); }, 1500);
+                // به سرور بگو نوبت رو عوض کنه
+                setTimeout(() => { 
+                    socket.emit('end-turn');
+                }, 1500);
             }
         }
 
@@ -208,13 +221,12 @@
             document.getElementById('game-msg').innerText = `حریف ${data.dice} آورد.`;
         });
 
-        // --- حرکت ---
         function selectPiece(pieceIndex) {
             if (!isMyTurn || !hasRolled) return;
             const currentPos = pieces[myPlayerNumber][pieceIndex];
 
-            if (currentPos === -1 && currentDice !== 6) return; // باید ۶ بیاری
-            if (currentPos !== -1 && currentPos + currentDice > totalPathLength) return; // از مرز رد میشه
+            if (currentPos === -1 && currentDice !== 6) return; 
+            if (currentPos !== -1 && currentPos + currentDice > totalPathLength) return; 
 
             let newPos;
             if (currentPos === -1) newPos = 0;
@@ -223,45 +235,25 @@
             pieces[myPlayerNumber][pieceIndex] = newPos;
             socket.emit('make-move', { player: myPlayerNumber, pieceIndex: pieceIndex, newPos: newPos });
 
-            // برنده شدن؟
             if (newPos === totalPathLength) alert("🎉 تبریک! شما برنده شدید!");
 
-            endTurn();
-        }
-
-        function endTurn() {
-            hasRolled = false;
-            isMyTurn = false;
-            document.getElementById('roll-btn').innerText = "انداختن تاس";
-            document.getElementById('roll-btn').disabled = true;
-            document.getElementById('turn-text').innerText = "منتظر حریف...";
-            document.getElementById('game-msg').innerText = "";
-            updateUI();
+            // بعد از حرکت، نوبت رو به سرور می‌سپاریم
+            socket.emit('end-turn');
         }
 
         socket.on('opponent-move', (data) => {
             pieces[data.player][data.pieceIndex] = data.newPos;
-            
-            isMyTurn = true;
-            hasRolled = false;
-            document.getElementById('turn-text').innerText = "نوبت شماست! تاس بیندازید.";
-            document.getElementById('roll-btn').innerText = "انداختن تاس";
-            document.getElementById('roll-btn').disabled = false;
             updateUI();
         });
 
-        // --- آپدیت UI ---
         function updateUI() {
             document.querySelectorAll('.piece').forEach(p => p.remove());
             
             for (let p = 1; p <= 2; p++) {
                 pieces[p].forEach((pos, index) => {
                     let cellIndex = null;
-                    if (pos >= 0 && pos < path.length) {
-                        cellIndex = path[pos];
-                    } else if (pos >= path.length && pos <= totalPathLength) {
-                        cellIndex = homeStretch[pos - path.length];
-                    }
+                    if (pos >= 0 && pos < path.length) cellIndex = path[pos];
+                    else if (pos >= path.length && pos <= totalPathLength) cellIndex = homeStretch[pos - path.length];
 
                     if (cellIndex !== null) {
                         const cell = document.querySelector(`.cell[data-index="${cellIndex}"]`);
@@ -269,16 +261,13 @@
                             const pieceDiv = document.createElement('div');
                             pieceDiv.classList.add('piece', `p${p}`);
                             
-                            // هایلایت کردن مهره‌های قابل حرکت
                             if (p === myPlayerNumber && isMyTurn && hasRolled) {
                                 if ((pos === -1 && currentDice === 6) || (pos !== -1 && pos + currentDice <= totalPathLength)) {
                                     pieceDiv.classList.add('highlight');
                                 }
                             }
                             
-                            if (p === myPlayerNumber) {
-                                pieceDiv.onclick = () => selectPiece(index);
-                            }
+                            if (p === myPlayerNumber) pieceDiv.onclick = () => selectPiece(index);
                             cell.appendChild(pieceDiv);
                         }
                     }
