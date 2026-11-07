@@ -7,23 +7,35 @@
     <script src="https://manch-server.onrender.com/socket.io/socket.io.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: Tahoma, sans-serif; background: linear-gradient(135deg, #1a1a2e, #16213e); color: white; text-align: center; padding: 20px; min-height: 100vh; }
-        h1 { color: #06C755; margin-bottom: 20px; font-size: 26px; }
-        .card { background: rgba(30, 41, 59, 0.8); padding: 20px; border-radius: 15px; max-width: 400px; margin: 0 auto; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        .id-box { background: #0f172a; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #06C755; font-size: 20px; font-weight: bold; color: #06C755; letter-spacing: 2px; }
+        body { font-family: Tahoma, sans-serif; background: #1a1a2e; color: white; text-align: center; padding: 15px; min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
+        h1 { color: #06C755; margin-bottom: 15px; font-size: 24px; }
+        .card { background: #16213e; padding: 20px; border-radius: 15px; max-width: 450px; width: 100%; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .id-box { background: #0f172a; padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #06C755; font-size: 20px; font-weight: bold; color: #06C755; }
         input { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; text-align: center; font-size: 18px; }
         button { background: #06C755; color: white; border: none; padding: 10px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 10px; width: 100%; }
-        button:hover { background: #05a648; }
-        #status { font-size: 14px; color: #94a3b8; margin-top: 10px; min-height: 20px; }
+        button:disabled { background: #475569; cursor: not-allowed; }
+        #status { font-size: 14px; color: #94a3b8; margin-top: 10px; }
         .hidden { display: none !important; }
+
+        /* --- استایل صفحه منچ --- */
+        .board-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; background: #0f172a; padding: 10px; border-radius: 10px; margin-top: 10px; }
+        .cell { width: 60px; height: 60px; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; border: 1px solid #334155; transition: 0.2s; }
         
-        /* استایل صفحه بازی */
-        #game-board { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; background: #1e293b; padding: 10px; border-radius: 10px; margin-top: 20px; }
-        .cell { background: #334155; aspect-ratio: 1; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; user-select: none; border: 1px solid #475569; }
-        .cell:hover { background: #475569; }
-        .cell.p1 { background: #06C755; color: white; } /* مهره بازیکن ۱ */
-        .cell.p2 { background: #ef4444; color: white; } /* مهره بازیکن ۲ */
-        #turn-indicator { font-size: 18px; font-weight: bold; margin: 15px 0; color: #fbbf24; }
+        /* رنگ خانه‌ها */
+        .cell.p1-home { background: #06C755; }
+        .cell.p2-home { background: #ef4444; }
+        .cell.path { background: #334155; }
+        .cell:hover { filter: brightness(1.3); }
+
+        /* مهره‌ها */
+        .piece { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; color: white; }
+        .piece.p1 { background: #05a648; border: 2px solid white; box-shadow: 0 0 10px #06C755; }
+        .piece.p2 { background: #dc2626; border: 2px solid white; box-shadow: 0 0 10px #ef4444; }
+
+        /* بخش تاس */
+        .dice-area { display: flex; justify-content: center; align-items: center; gap: 20px; margin: 15px 0; }
+        .dice { width: 60px; height: 60px; background: white; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: bold; color: black; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        #turn-text { font-size: 18px; font-weight: bold; color: #fbbf24; }
     </style>
 </head>
 <body>
@@ -48,8 +60,15 @@
 
     <!-- صفحه بازی -->
     <div class="card hidden" id="game-area">
-        <div id="turn-indicator">نوبت شماست!</div>
-        <div id="game-board"></div>
+        <div id="turn-text">نوبت شماست!</div>
+        
+        <div class="board-container" id="game-board"></div>
+        
+        <div class="dice-area">
+            <button onclick="rollDice()" id="roll-btn">انداختن تاس</button>
+            <div class="dice" id="dice-display">?</div>
+        </div>
+        <div id="game-msg" style="color: #94a3b8; font-size: 14px; margin-top: 10px;"></div>
     </div>
 
     <script>
@@ -57,23 +76,27 @@
         let myId = null;
         let requesterId = null;
         let isMyTurn = false;
-        let myPlayerNumber = 1; // 1 یا 2
+        let myPlayerNumber = 1; 
+        let currentDice = 0;
+        let lastRolled = false;
 
-        // ساخت صفحه بازی ۵x۵ (۲۵ خانه)
+        // تعریف ۲۵ خانه (۵ در ۵) 
+        // خانه‌های ۰ تا ۴ (ردیف اول) خانه بازیکن ۱
+        // خانه‌های ۲۰ تا ۲۴ (ردیف آخر) خانه بازیکن ۲
+        // بقیه مسیر معمولی
         const board = document.getElementById('game-board');
         for (let i = 0; i < 25; i++) {
             const cell = document.createElement('div');
             cell.classList.add('cell');
+            if (i < 5) cell.classList.add('p1-home');
+            else if (i >= 20) cell.classList.add('p2-home');
+            else cell.classList.add('path');
             cell.dataset.index = i;
             cell.addEventListener('click', () => makeMove(i));
             board.appendChild(cell);
         }
 
-        socket.on('connect', () => {
-            document.getElementById('status').innerText = "به سرور متصل شدید.";
-            document.getElementById('status').style.color = "#06C755";
-        });
-
+        // آیدی و اتصال
         socket.on('your-id', (id) => {
             myId = id;
             document.getElementById('my-id').innerText = id;
@@ -96,58 +119,86 @@
             socket.emit('accept-connect', requesterId);
         }
 
-        // وقتی بازی شروع شد
+        // شروع بازی
         socket.on('game-started', (data) => {
             document.getElementById('main-menu').classList.add('hidden');
             document.getElementById('game-area').classList.remove('hidden');
             
-            // بازیکنی که درخواست داده بود، شماره ۱ و بازیکنی که قبول کرد، شماره ۲ می‌شود
             if (data.requester === myId) {
                 myPlayerNumber = 1;
                 isMyTurn = true;
-                document.getElementById('turn-indicator').innerText = "شما بازیکن ۱ (سبز) هستید. نوبت شماست!";
+                document.getElementById('turn-text').innerText = "شما بازیکن ۱ (سبز) هستید. تاس بیندازید!";
+                document.getElementById('roll-btn').disabled = false;
             } else {
                 myPlayerNumber = 2;
                 isMyTurn = false;
-                document.getElementById('turn-indicator').innerText = "شما بازیکن ۲ (قرمز) هستید. منتظر حرکت حریف...";
+                document.getElementById('turn-text').innerText = "شما بازیکن ۲ (قرمز) هستید. منتظر حریف...";
+                document.getElementById('roll-btn').disabled = true;
             }
         });
 
-        // تابعی که وقتی روی یک خانه کلیک می‌کنیم اجرا می‌شود
-        function makeMove(index) {
-            if (!isMyTurn) return alert("الان نوبت شما نیست!");
+        // انداختن تاس (فقط لوکال - برای تست)
+        function rollDice() {
+            if (!isMyTurn || lastRolled) return;
+            currentDice = Math.floor(Math.random() * 6) + 1;
+            document.getElementById('dice-display').innerText = currentDice;
+            document.getElementById('game-msg').innerText = `شما ${currentDice} آوردید. یک مهره را حرکت دهید.`;
+            lastRolled = true;
+            document.getElementById('roll-btn').disabled = true;
             
-            const cell = document.querySelector(`.cell[data-index="${index}"]`);
-            if (cell.classList.contains('p1') || cell.classList.contains('p2')) return alert("این خانه پر است!");
-
-            // آپدیت صفحه خودم
-            applyMove(index, myPlayerNumber);
-
-            // ارسال حرکت به سرور
-            socket.emit('make-move', { index: index, player: myPlayerNumber });
-
-            // تغییر نوبت
-            isMyTurn = false;
-            document.getElementById('turn-indicator').innerText = "منتظر حرکت حریف...";
+            // ارسال نتیجه تاس به حریف
+            socket.emit('dice-rolled', { dice: currentDice });
         }
 
-        // دریافت حرکت از حریف
+        // دریافت تاس حریف
+        socket.on('opponent-dice', (data) => {
+            document.getElementById('dice-display').innerText = data.dice;
+            document.getElementById('game-msg').innerText = `حریف ${data.dice} آورد. منتظر حرکتش باشید...`;
+        });
+
+        // حرکت دادن مهره
+        function makeMove(index) {
+            if (!isMyTurn || !lastRolled) return; 
+            
+            // فقط اجازه حرکت در خانه‌های خالی
+            const cell = document.querySelector(`.cell[data-index="${index}"]`);
+            if (cell.querySelector('.piece')) return alert("این خانه پر است!");
+
+            // اعمال حرکت روی صفحه خودم
+            applyMove(index, myPlayerNumber);
+            
+            // ارسال حرکت به سرور
+            socket.emit('make-move', { index: index, player: myPlayerNumber });
+            
+            // پایان نوبت
+            isMyTurn = false;
+            lastRolled = false;
+            document.getElementById('turn-text').innerText = "منتظر حرکت حریف...";
+            document.getElementById('roll-btn').disabled = true;
+        }
+
+        // دریافت حرکت حریف
         socket.on('opponent-move', (data) => {
             applyMove(data.index, data.player);
             isMyTurn = true;
-            document.getElementById('turn-indicator').innerText = "نوبت شماست!";
+            lastRolled = false;
+            document.getElementById('turn-text').innerText = "نوبت شماست! تاس بیندازید.";
+            document.getElementById('roll-btn').disabled = false;
         });
 
-        // اعمال رنگ مهره روی صفحه
+        // رسم مهره
         function applyMove(index, playerNumber) {
             const cell = document.querySelector(`.cell[data-index="${index}"]`);
+            const piece = document.createElement('div');
+            piece.classList.add('piece');
             if (playerNumber === 1) {
-                cell.classList.add('p1');
-                cell.innerText = '●';
+                piece.classList.add('p1');
+                piece.innerText = '1';
             } else {
-                cell.classList.add('p2');
-                cell.innerText = '●';
+                piece.classList.add('p2');
+                piece.innerText = '2';
             }
+            cell.appendChild(piece);
         }
     </script>
 </body>
