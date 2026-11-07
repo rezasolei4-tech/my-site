@@ -104,19 +104,16 @@
 
         const deletedCells = [37, 38, 39, 40, 41, 42, 43];
 
-        // 🚨 مسیر قرمز 
-        const pathP1 = [4, 3, 12, 21, 30, 29, 28, 27, 36, 45, 46, 47, 48, 57, 66, 75, 76, 77, 68, 59, 50, 32, 23, 14, 5];
+        // 🚨 مسیر قرمز دقیقاً طبق لیست شما
+        const pathP1 = [4, 3, 12, 21, 30, 29, 28, 27, 36, 45, 46, 47, 48, 57, 66, 75, 76, 77, 68, 59, 50, 51, 52, 53, 44, 35, 34, 33, 32, 23, 14, 5, 13, 22, 31];
         
         // 🚨 مسیر آبی دقیقاً طبق لیست شما (بدون ۷۶ اولی)
         const pathP2 = [77, 68, 59, 50, 51, 52, 53, 44, 35, 34, 33, 32, 23, 14, 5, 4, 3, 12, 21, 30, 29, 28, 27, 36, 45, 46, 47, 48, 57, 66, 75, 67, 58, 49];
 
-        // مسیرهای نهایی
-        const homeP1 = [13, 22, 31]; 
-        
         const startPointP1 = 4;
         const startPointP2 = 76;
 
-        const totalPathLength = pathP1.length + homeP1.length - 1; 
+        const totalPathLength = pathP1.length - 1; 
 
         const board = document.getElementById('game-board');
 
@@ -137,7 +134,9 @@
                 if (i === startPointP1) cell.classList.add('red-start'); 
                 if (i === startPointP2) cell.classList.add('blue-start');
                 
-                if (homeP1.includes(i)) cell.classList.add('red-home');
+                // 🚨 خونه نهایی قرمز: ۳۱ (آخرین خونه لیست)
+                if (i === 31) cell.classList.add('red-home');
+                // 🚨 خونه نهایی آبی: ۴۹ (آخرین خونه لیست)
                 if (i === 49) cell.classList.add('blue-home'); 
             }
             board.appendChild(cell);
@@ -290,15 +289,13 @@
             
             for (let p = 1; p <= 2; p++) {
                 const currentPath = (p === 1) ? pathP1 : pathP2;
-                const currentHome = (p === 1) ? homeP1 : homeP2;
 
                 pieces[p].forEach((pos, index) => {
                     if (pos !== -1) {
                         let cellIndex;
-                        if (pos >= totalPathLength) {
-                            cellIndex = (p === 1) ? 31 : 49; 
-                        } else if (p === 1 && pos >= currentPath.length) {
-                            cellIndex = currentHome[pos - currentPath.length];
+                        // 🚨 پیدا کردن خونه بر اساس ایندکس در مسیر
+                        if (pos >= currentPath.length) {
+                            cellIndex = currentPath[currentPath.length - 1]; 
                         } else {
                             cellIndex = currentPath[pos];
                         }
@@ -307,7 +304,7 @@
                         if (cell) {
                             const pieceDiv = document.createElement('div');
                             pieceDiv.classList.add('piece', `p${p}`);
-                            if (pos === totalPathLength) pieceDiv.classList.add('finished');
+                            if (pos >= totalPathLength) pieceDiv.classList.add('finished');
 
                             if (p === myPlayerNumber && isMyTurn && hasRolled) {
                                 if ((pos === -1 && currentDice === 6) || (pos !== totalPathLength && pos + currentDice <= totalPathLength)) {
