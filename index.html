@@ -27,7 +27,6 @@
         .cell.blue-start { background-color: #4444ff; color: white;}
         .cell.red-home { background-color: #ff9999; border: 2px solid #ff0000; }
         .cell.blue-home { background-color: #9999ff; border: 2px solid #0000ff; }
-        .cell.center { background: linear-gradient(135deg, #ff9999 50%, #9999ff 50%); }
         
         /* مهره‌ها */
         .piece { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 22px; position: absolute; z-index: 10; cursor: pointer; transition: transform 0.2s; }
@@ -100,25 +99,20 @@
         let currentDice = 0;
         let hasRolled = false; 
 
-        let pieces = { 1: [-1, -1, -1, -1], 2: [-1, -1, -1, -1] };
+        // 🚨 ۳ مهره برای هر بازیکن
+        let pieces = { 1: [-1, -1, -1], 2: [-1, -1, -1] };
 
-        // 🚨 لیست خونه‌هایی که قراره حذف بشن
-        const deletedCells = [37, 38, 39, 41, 42, 43];
+        // 🚨 لیست خونه‌هایی که حذف میشن (شامل ۴۰)
+        const deletedCells = [37, 38, 39, 40, 41, 42, 43];
 
-        // 🚨 مسیرهای جدید (با نادیده گرفتن خونه‌های حذف شده)
-        // قرمز: از 30 میره مستقیم به 29 (چون 37,38,39 نیستن) و از 45 میره به 46 (چون 41,42,43 نیستن)
-        const pathP1 = [
-            4, 3, 12, 21, 30, 29, 28, 27, 36, 45, 46, 47, 48, 57, 66, 75, 76, 77, 68, 59, 50, 32, 23, 14, 5
-        ];
-        
-        // آبی: از 41 میره مستقیم به 32 (چون 39,38,37 نیستن) و از 46 میره به 45 (چون 43,42,41 نیستن)
-        const pathP2 = [
-            76, 77, 68, 59, 50, 32, 23, 14, 5, 4, 3, 12, 21, 30, 29, 28, 27, 36, 45, 46, 47, 48, 57, 66, 75
-        ];
+        // 🚨 مسیرها (با نادیده گرفتن خونه‌های حذف شده)
+        const pathP1 = [4, 3, 12, 21, 30, 29, 28, 27, 36, 45, 46, 47, 48, 57, 66, 75, 76, 77, 68, 59, 50, 32, 23, 14, 5];
+        const pathP2 = [76, 77, 68, 59, 50, 32, 23, 14, 5, 4, 3, 12, 21, 30, 29, 28, 27, 36, 45, 46, 47, 48, 57, 66, 75];
 
-        // 🚨 مسیرهای نهایی (Home Stretch) - باید کمی تغییر کنن چون 31 و 49 هم ممکنه تحت تاثیر قرار بگیرن
-        const homeP1 = [13, 22, 31, 40]; 
-        const homeP2 = [67, 58, 49, 40]; 
+        // 🚨 مسیرهای نهایی (مقصد جایگزین ۴۰)
+        // قرمز به خونه ۳۱ میرسه، آبی به خونه ۴۹
+        const homeP1 = [13, 22, 31]; 
+        const homeP2 = [67, 58, 49]; 
 
         const startPointP1 = 4;
         const startPointP2 = 76;
@@ -134,7 +128,6 @@
             const isVertical = (col >= 3 && col <= 5);
             const isHorizontal = (row >= 3 && row <= 5);
 
-            // 🚨 اگر خونه جزو لیست حذف شده‌ها بود، اصلا ساخته نشه
             if (deletedCells.includes(i) || (!isVertical && !isHorizontal)) {
                 cell.classList.add('empty-space');
             } else {
@@ -145,10 +138,8 @@
                 if (i === startPointP1) cell.classList.add('red-start'); 
                 if (i === startPointP2) cell.classList.add('blue-start');
                 
-                if (homeP1.includes(i) && i !== 40) cell.classList.add('red-home');
-                if (homeP2.includes(i) && i !== 40) cell.classList.add('blue-home');
-                
-                if (i === 40) cell.classList.add('center');
+                if (homeP1.includes(i)) cell.classList.add('red-home');
+                if (homeP2.includes(i)) cell.classList.add('blue-home');
             }
             board.appendChild(cell);
         }
@@ -274,8 +265,9 @@
                 killed: { player: opponentPlayerNum, pieceIndex: killedPieceIndex, newPos: -1 }
             });
 
+            // 🚨 شرط برنده شدن: رسیدن ۳ مهره
             let winCount = pieces[myPlayerNumber].filter(p => p === totalPathLength).length;
-            if (winCount === 4) {
+            if (winCount === 3) {
                 socket.emit('end-turn', { winner: myPlayerNumber });
                 return;
             }
@@ -305,8 +297,9 @@
                 pieces[p].forEach((pos, index) => {
                     if (pos !== -1) {
                         let cellIndex;
+                        // 🚨 وقتی مهره به خونه نهایی رسید، روی آخرین خونه Home می‌مونه
                         if (pos >= totalPathLength) {
-                            cellIndex = 40; // مرکز
+                            cellIndex = currentHome[currentHome.length - 1]; 
                         } else if (pos >= currentPath.length) {
                             cellIndex = currentHome[pos - currentPath.length];
                         } else {
