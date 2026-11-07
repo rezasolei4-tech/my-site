@@ -99,21 +99,20 @@
         let currentDice = 0;
         let hasRolled = false; 
 
-        // 🚨 ۳ مهره برای هر بازیکن
+        // ۳ مهره برای هر بازیکن
         let pieces = { 1: [-1, -1, -1], 2: [-1, -1, -1] };
 
-        // 🚨 لیست خونه‌هایی که حذف میشن (شامل ۴۰)
         const deletedCells = [37, 38, 39, 40, 41, 42, 43];
 
-        // 🚨 مسیرها (با نادیده گرفتن خونه‌های حذف شده)
+        // 🚨 مسیر قرمز 
         const pathP1 = [4, 3, 12, 21, 30, 29, 28, 27, 36, 45, 46, 47, 48, 57, 66, 75, 76, 77, 68, 59, 50, 32, 23, 14, 5];
-        const pathP2 = [76, 77, 68, 59, 50, 32, 23, 14, 5, 4, 3, 12, 21, 30, 29, 28, 27, 36, 45, 46, 47, 48, 57, 66, 75];
+        
+        // 🚨 مسیر آبی دقیقاً طبق لیست شما (بدون ۷۶ اولی)
+        const pathP2 = [77, 68, 59, 50, 51, 52, 53, 44, 35, 34, 33, 32, 23, 14, 5, 4, 3, 12, 21, 30, 29, 28, 27, 36, 45, 46, 47, 48, 57, 66, 75, 67, 58, 49];
 
-        // 🚨 مسیرهای نهایی (مقصد جایگزین ۴۰)
-        // قرمز به خونه ۳۱ میرسه، آبی به خونه ۴۹
+        // مسیرهای نهایی
         const homeP1 = [13, 22, 31]; 
-        const homeP2 = [67, 58, 49]; 
-
+        
         const startPointP1 = 4;
         const startPointP2 = 76;
 
@@ -139,7 +138,7 @@
                 if (i === startPointP2) cell.classList.add('blue-start');
                 
                 if (homeP1.includes(i)) cell.classList.add('red-home');
-                if (homeP2.includes(i)) cell.classList.add('blue-home');
+                if (i === 49) cell.classList.add('blue-home'); 
             }
             board.appendChild(cell);
         }
@@ -265,7 +264,6 @@
                 killed: { player: opponentPlayerNum, pieceIndex: killedPieceIndex, newPos: -1 }
             });
 
-            // 🚨 شرط برنده شدن: رسیدن ۳ مهره
             let winCount = pieces[myPlayerNumber].filter(p => p === totalPathLength).length;
             if (winCount === 3) {
                 socket.emit('end-turn', { winner: myPlayerNumber });
@@ -297,10 +295,9 @@
                 pieces[p].forEach((pos, index) => {
                     if (pos !== -1) {
                         let cellIndex;
-                        // 🚨 وقتی مهره به خونه نهایی رسید، روی آخرین خونه Home می‌مونه
                         if (pos >= totalPathLength) {
-                            cellIndex = currentHome[currentHome.length - 1]; 
-                        } else if (pos >= currentPath.length) {
+                            cellIndex = (p === 1) ? 31 : 49; 
+                        } else if (p === 1 && pos >= currentPath.length) {
                             cellIndex = currentHome[pos - currentPath.length];
                         } else {
                             cellIndex = currentPath[pos];
