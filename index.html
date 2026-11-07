@@ -3,161 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>بازی منچ (P2P)</title>
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <script src="/socket.io/socket.io.js"></script>
+    <title>بازی منچ آنلاین (P2P)</title>
+    <!-- این خط کتابخانه Socket.io را از سرور Render شما لود می‌کند -->
+    <script src="https://manch-server.onrender.com/socket.io/socket.io.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: Tahoma, sans-serif; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-        h1 { color: #06C755; margin-bottom: 15px; font-size: 24px; }
-        .card { background: rgba(30, 41, 59, 0.95); padding: 25px; border-radius: 16px; width: 100%; max-width: 450px; margin-bottom: 20px; border: 1px solid rgba(6,199,85,0.2); }
-        .id-box { background: #0f172a; padding: 12px; border-radius: 8px; margin: 10px 0; font-family: monospace; font-size: 14px; word-break: break-all; color: #06C755; border: 1px dashed #06C755; }
-        input, button { width: 100%; padding: 12px; margin: 8px 0; border-radius: 10px; border: none; font-size: 14px; }
-        input { background: #0f172a; color: white; border: 1px solid #334155; }
-        button.primary { background: #06C755; color: white; cursor: pointer; font-weight: bold; }
+        body { font-family: Tahoma, sans-serif; background: linear-gradient(135deg, #1a1a2e, #16213e); color: white; text-align: center; padding: 20px; min-height: 100vh; }
+        h1 { color: #06C755; margin-bottom: 20px; font-size: 28px; }
+        .card { background: rgba(30, 41, 59, 0.8); padding: 25px; border-radius: 15px; max-width: 400px; margin: 0 auto; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .id-box { background: #0f172a; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #06C755; font-size: 18px; font-weight: bold; color: #06C755; }
+        input { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; text-align: center; font-size: 16px; }
+        button.primary { width: 100%; background: #06C755; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; }
         button.primary:hover { background: #05a648; }
-        #status { font-size: 13px; color: #94a3b8; margin-top: 10px; text-align: center; }
-        .board { display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; background: #334155; padding: 8px; border-radius: 12px; width: 92vw; max-width: 520px; aspect-ratio: 1/1; }
-        .cell { background: #f8fafc; border-radius: 3px; }
+        #status { font-size: 14px; color: #94a3b8; margin-top: 15px; }
+        /* استایل‌های مربوط به صفحه بازی (در صورت نیاز) */
+        .board { display: none; grid-template-columns: repeat(5, 1fr); gap: 5px; max-width: 300px; margin: 20px auto; }
+        .cell { background: #1e293b; border-radius: 5px; height: 50px; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 1px solid #334155; }
         .cell.red { background: #ef4444; }
-        .cell.blue { background: #3b82f6; }
-        .cell.green { background: #22c55e; }
-        .cell.yellow { background: #eab308; }
-        .dice-area { margin-top: 25px; text-align: center; }
-        .dice { font-size: 70px; margin: 10px 0; }
-        #turnIndicator { font-size: 16px; font-weight: bold; color: #06C755; margin-bottom: 10px; }
     </style>
 </head>
 <body>
+
     <h1>🎲 بازی منچ آنلاین</h1>
 
-    <div class="card" id="connectBox">
+    <div class="card">
         <h2>🔗 اتصال به حریف</h2>
         <p>آیدی اختصاصی شما:</p>
-        <div class="id-box" id="myIdDisplay">در حال ساخت...</div>
-        <p style="margin-top: 15px;">آیدی حریف را وارد کنید:</p>
-        <input type="text" id="peerIdInput" placeholder="مثلاً player-12345" />
-        <button class="primary" onclick="connectToPeer()">اتصال به حریف</button>
+        <div id="my-id" class="id-box">در حال ساخت...</div>
+
+        <p>آیدی حریف را وارد کنید:</p>
+        <input type="text" id="opponent-id" placeholder="مثلا player-12345">
+        
+        <button class="primary" onclick="connectToOpponent()">اتصال به حریف</button>
+        
         <div id="status">در حال آماده‌سازی...</div>
     </div>
 
-    <div id="gameBox" style="display:none; flex-direction: column; align-items: center;">
-        <div id="turnIndicator">نوبت: شما</div>
-        <div class="board" id="boardGrid"></div>
-        <div class="dice-area">
-            <div class="dice" id="diceDisplay">🎲</div>
-            <button class="primary" onclick="rollDice()" id="rollBtn">انداختن تاس</button>
-        </div>
-    </div>
-
     <script>
-        const socket = io();
-        const username = localStorage.getItem('ludoUsername');
-        if (!username) window.location.href = '/';
+        // ⚠️ اتصال به سرور آنلاین شما در Render
+        const socket = io("https://manch-server.onrender.com");
 
-        // اتصال به لابی
-        socket.emit('joinLobby', username);
-
-        socket.on('lobbyUpdate', (players) => {
-            document.getElementById('status').textContent = 'بازیکنان آنلاین: ' + players.join(', ');
+        // وقتی به سرور وصل شدیم
+        socket.on('connect', () => {
+            document.getElementById('my-id').innerText = socket.id;
+            document.getElementById('status').innerText = "به سرور متصل شدید. منتظر حریف...";
+            document.getElementById('status').style.color = "#06C755";
         });
 
-        socket.on('inQueue', (data) => {
-            document.getElementById('status').textContent = 'شما در صف هستید. نفر ' + data.position;
+        // وقتی سرور قطع شد
+        socket.on('disconnect', () => {
+            document.getElementById('status').innerText = "ارتباط با سرور قطع شد.";
+            document.getElementById('status').style.color = "#ef4444";
         });
 
-        // PeerJS
-        const myId = 'player-' + Math.floor(Math.random() * 100000);
-        let peer = null;
-        let conn = null;
-        let myTurn = true;
-
-        peer = new Peer(myId, { debug: 1 });
-        
-        peer.on('open', (id) => {
-            document.getElementById('myIdDisplay').textContent = id;
-        });
-
-        peer.on('connection', (connection) => {
-            conn = connection;
-            setupConnection();
-        });
-
-        function connectToPeer() {
-            const targetId = document.getElementById('peerIdInput').value.trim();
-            if (!targetId) return alert('آیدی حریف را وارد کن!');
-            conn = peer.connect(targetId);
-            setupConnection();
-        }
-
-        function setupConnection() {
-            conn.on('open', () => {
-                document.getElementById('connectBox').style.display = 'none';
-                document.getElementById('gameBox').style.display = 'flex';
-                createBoard();
-                // خروج از لابی (آزاد کردن جا برای نفر بعدی)
-                socket.emit('leaveLobby');
-            });
-
-            conn.on('data', (data) => {
-                if (data.type === 'dice') {
-                    document.getElementById('diceDisplay').textContent = data.value;
-                    myTurn = true;
-                    document.getElementById('rollBtn').disabled = false;
-                    updateTurnIndicator();
-                }
-            });
-        }
-
-        const boardMap = [
-            [1,1,1,1,1,1,0,0,0,3,3,3,3,3,3],
-            [1,1,1,1,1,1,0,0,0,3,3,3,3,3,3],
-            [1,1,1,1,1,1,0,0,0,3,3,3,3,3,3],
-            [1,1,1,1,1,1,0,0,0,3,3,3,3,3,3],
-            [1,1,1,1,1,1,0,0,0,3,3,3,3,3,3],
-            [1,1,1,1,1,1,0,0,0,3,3,3,3,3,3],
-            [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-            [2,2,2,2,2,2,0,0,0,4,4,4,4,4,4],
-            [2,2,2,2,2,2,0,0,0,4,4,4,4,4,4],
-            [2,2,2,2,2,2,0,0,0,4,4,4,4,4,4],
-            [2,2,2,2,2,2,0,0,0,4,4,4,4,4,4],
-            [2,2,2,2,2,2,0,0,0,4,4,4,4,4,4],
-            [2,2,2,2,2,2,0,0,0,4,4,4,4,4,4]
-        ];
-
-        function createBoard() {
-            const grid = document.getElementById('boardGrid');
-            grid.innerHTML = '';
-            for (let row = 0; row < 15; row++) {
-                for (let col = 0; col < 15; col++) {
-                    const cell = document.createElement('div');
-                    const val = boardMap[row][col];
-                    let colorClass = '';
-                    if (val === 1) colorClass = 'red';
-                    else if (val === 2) colorClass = 'blue';
-                    else if (val === 3) colorClass = 'green';
-                    else if (val === 4) colorClass = 'yellow';
-                    cell.className = 'cell ' + colorClass;
-                    grid.appendChild(cell);
-                }
+        // تابعی برای زمانی که دکمه اتصال زده می‌شود
+        function connectToOpponent() {
+            const opponentId = document.getElementById('opponent-id').value.trim();
+            if (!opponentId) {
+                alert("لطفاً آیدی حریف را وارد کنید.");
+                return;
             }
+            
+            // ارسال درخواست به سرور برای اتصال به اتاق
+            socket.emit('join-game', opponentId);
+            document.getElementById('status').innerText = "درخواست اتصال ارسال شد...";
         }
 
-        function updateTurnIndicator() {
-            document.getElementById('turnIndicator').textContent = myTurn ? '🎯 نوبت: شما' : '⏳ نوبت: حریف';
-        }
-
-        function rollDice() {
-            if (!myTurn) return alert('نوبت شما نیست!');
-            const dice = Math.floor(Math.random() * 6) + 1;
-            document.getElementById('diceDisplay').textContent = dice;
-            myTurn = false;
-            document.getElementById('rollBtn').disabled = true;
-            updateTurnIndicator();
-            conn.send({ type: 'dice', value: dice });
-        }
+        // وقتی حریف به بازی متصل شد
+        socket.on('opponent-joined', (opponentSocketId) => {
+            document.getElementById('status').innerText = `حریف (${opponentSocketId}) متصل شد! بازی شروع می‌شود.`;
+            document.getElementById('status').style.color = "#06C755";
+            // اینجا می‌توانید کدهای نمایش صفحه بازی را فعال کنید
+        });
     </script>
 </body>
 </html>
