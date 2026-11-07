@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>بازی منچ آنلاین</title>
+    <title>بازی منچ (نقشه شماره‌گذاری شده)</title>
     <script src="https://manch-server.onrender.com/socket.io/socket.io.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -16,46 +16,39 @@
         button { background: #06C755; color: white; border: none; padding: 10px; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; width: 100%; transition: 0.2s; }
         button:disabled { background: #555; cursor: not-allowed; opacity: 0.7; }
 
-        .board-wrapper { background: #d2a679; padding: 5px; border-radius: 10px; border: 3px solid #8b5a2b; width: 90vw; max-width: 400px; aspect-ratio: 1 / 1; margin-bottom: 15px; }
+        .board-wrapper { background: #d2a679; padding: 5px; border-radius: 10px; border: 3px solid #8b5a2b; width: 95vw; max-width: 500px; aspect-ratio: 1 / 1; margin-bottom: 15px; }
         #game-board { display: grid; grid-template-columns: repeat(9, 1fr); grid-template-rows: repeat(9, 1fr); gap: 2px; width: 100%; height: 100%; }
         .empty-space { background: transparent; }
-        .cell { background-color: white; border-radius: 50%; border: 1px solid #333; display: flex; align-items: center; justify-content: center; position: relative; }
         
-        /* 🚨 رنگ خونه‌های شروع */
-        .cell.red-start { background-color: #ff4444; }
-        .cell.blue-start { background-color: #4444ff; }
+        /* استایل خونه‌ها برای دیدن اعداد */
+        .cell { 
+            background-color: white; 
+            border-radius: 50%; 
+            border: 1px solid #333; 
+            display: flex; align-items: center; justify-content: center; position: relative; 
+            color: black; font-weight: bold; font-size: 14px;
+        }
         
-        /* 🚨 رنگ خونه‌های نهایی (Home) */
-        .cell.red-home { background-color: #ff9999; border: 2px solid #ff0000; }
-        .cell.blue-home { background-color: #9999ff; border: 2px solid #0000ff; }
-        
-        /* مهره‌ها */
-        .piece { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 22px; position: absolute; z-index: 10; cursor: pointer; transition: transform 0.2s; }
+        /* استایل مهره‌ها که فعلاً ساده هستن */
+        .piece { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 22px; position: absolute; z-index: 10; cursor: pointer; }
         .piece.p1::after { content: '🐱'; }
         .piece.p2::after { content: '🐶'; }
-        .piece.highlight { border: 2px solid yellow; border-radius: 50%; box-shadow: 0 0 15px yellow; transform: scale(1.2); animation: bounce 0.5s infinite alternate; }
-        .piece.finished { filter: drop-shadow(0 0 5px gold); }
-
-        @keyframes bounce { from { transform: scale(1.1); } to { transform: scale(1.3); } }
-
-        .dice-container { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; max-width: 400px; }
-        .dice { width: 60px; height: 60px; background: white; border-radius: 10px; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); padding: 8px; gap: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-        .dot { background: black; border-radius: 50%; width: 100%; height: 100%; display: none; }
-        .dot.visible { display: block; }
 
         .home-pieces { display: flex; justify-content: center; gap: 15px; margin-bottom: 10px; }
         .home-piece { width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; font-size: 24px; border-radius: 50%; border: 2px solid #fff; transition: 0.2s; background: #0f172a; }
         .home-piece.p1::after { content: '🐱'; }
         .home-piece.p2::after { content: '🐶'; }
-        .home-piece.highlight { border: 2px solid yellow; box-shadow: 0 0 15px yellow; transform: scale(1.2); cursor: pointer; }
 
         #turn-text { font-size: 16px; font-weight: bold; color: #fbbf24; margin-bottom: 10px; text-align: center; }
         #game-msg { color: #94a3b8; font-size: 14px; margin-bottom: 10px; text-align: center; min-height: 20px; }
+        
+        /* حذف استایل‌های اضافی برای تمرکز روی اعداد */
+        .cell.red-start, .cell.blue-start, .cell.red-home, .cell.blue-home { background-color: white; border: 1px solid #333; }
     </style>
 </head>
 <body>
 
-    <h1>🎲 بازی منچ آنلاین</h1>
+    <h1>🎲 نقشه شماره‌گذاری شده منچ</h1>
 
     <div class="card" id="main-menu">
         <h2>اتصال به حریف</h2>
@@ -82,11 +75,6 @@
         </div>
         
         <div class="dice-container">
-            <div class="dice" id="dice-display">
-                <div class="dot" id="d1"></div><div class="dot" id="d2"></div><div class="dot" id="d3"></div>
-                <div class="dot" id="d4"></div><div class="dot" id="d5"></div><div class="dot" id="d6"></div>
-                <div class="dot" id="d7"></div><div class="dot" id="d8"></div><div class="dot" id="d9"></div>
-            </div>
             <button onclick="rollDice()" id="roll-btn">انداختن تاس</button>
             <div id="game-msg">آماده شروع</div>
         </div>
@@ -102,36 +90,16 @@
 
         let pieces = { 1: [-1, -1, -1, -1], 2: [-1, -1, -1, -1] };
 
-        // 🚨 تعریف دقیق ایندکس‌های مسیر
-        // (شروع از 1 به معنای خونه سفید بعد از خونه رنگی است)
-        const pathP1 = [
-            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, // ردیف بالا
-            18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, // ستون راست
-            31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, // ردیف پایین
-            44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56  // ستون چپ
-        ];
-        
-        const pathP2 = [
-            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 
-            18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 
-            31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 
-            44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56
-        ];
-
-        // مسیرهای نهایی (Home Stretch)
-        const homeP1 = [13, 22, 31, 40]; 
-        const homeP2 = [67, 58, 49, 40]; 
-
-        // 🚨 طول کل مسیر: 57 خونه
-        const totalPathLength = 57; 
-
-        // 🚨 ایندکس دقیق خونه‌های شروع و نهایی در گرید 9x9
-        const redStartIndex = 4;  // بالای ستون وسط
-        const blueStartIndex = 76; // پایین ستون وسط
-        const redFinalIndex = 40;  // مرکز
+        // ⚠️ این مسیرها فعلا موقتی هستند تا با شماره‌ها تطبیقشون بدیم
+        const pathP1 = []; 
+        const pathP2 = [];
+        const homeP1 = []; 
+        const homeP2 = []; 
+        const totalPathLength = 56; 
 
         const board = document.getElementById('game-board');
 
+        // 🚨 رسم زمین با شماره‌ها
         for (let i = 0; i < 81; i++) {
             const cell = document.createElement('div');
             const row = Math.floor(i / 9);
@@ -144,18 +112,8 @@
             } else {
                 cell.classList.add('cell');
                 cell.dataset.index = i;
-                
-                // 🚨 خونه رنگی شروع قرمز (بالای ستون وسط)
-                if (i === redStartIndex) cell.classList.add('red-start'); 
-                // 🚨 خونه رنگی شروع آبی (پایین ستون وسط)
-                if (i === blueStartIndex) cell.classList.add('blue-start');
-                
-                // خونه نهایی قرمز (ستون وسط، ۳ خونه بالای مرکز)
-                if (homeP1.includes(i) && i !== redFinalIndex) cell.classList.add('red-home');
-                // خونه نهایی آبی (ستون وسط، ۳ خونه پایین مرکز)
-                if (homeP2.includes(i) && i !== redFinalIndex) cell.classList.add('blue-home');
-                
-                if (i === redFinalIndex) { cell.style.background = 'linear-gradient(135deg, #ff9999 50%, #9999ff 50%)'; }
+                // نوشتن شماره خانه روی خود خانه
+                cell.innerText = i; 
             }
             board.appendChild(cell);
         }
@@ -186,18 +144,12 @@
             }
         });
 
-        socket.on('game-over', (data) => {
-            alert(`بازی تمام شد! ${data.winner === myId ? 'شما برنده شدید! 🎉' : 'حریف برنده شد! 😢'}`);
-            location.reload();
-        });
-
         socket.on('turn-changed', (data) => {
             if (data.nextTurn === myId) {
                 isMyTurn = true;
                 hasRolled = false;
                 document.getElementById('turn-text').innerText = "نوبت شماست! تاس بیندازید.";
                 document.getElementById('roll-btn').disabled = false;
-                document.getElementById('roll-btn').innerText = "انداختن تاس";
             } else {
                 isMyTurn = false;
                 document.getElementById('turn-text').innerText = "منتظر حرکت حریف...";
@@ -206,101 +158,40 @@
             updateUI();
         });
 
-        function updateDiceDisplay(number) {
-            const dots = ['d1','d2','d3','d4','d5','d6','d7','d8','d9'];
-            dots.forEach(d => document.getElementById(d).classList.remove('visible'));
-            const patterns = { 1:[5], 2:[1,9], 3:[1,5,9], 4:[1,3,7,9], 5:[1,3,5,7,9], 6:[1,3,4,6,7,9] };
-            if (patterns[number]) patterns[number].forEach(pos => document.getElementById(`d${pos}`).classList.add('visible'));
-        }
-
         function rollDice() {
             if (!isMyTurn || hasRolled) return;
             currentDice = Math.floor(Math.random() * 6) + 1;
-            updateDiceDisplay(currentDice);
+            alert("تاس شما: " + currentDice); // برای اینکه فعلا ببینیم تاس کار میکنه
             hasRolled = true;
             document.getElementById('roll-btn').disabled = true;
             socket.emit('dice-rolled', { dice: currentDice });
 
-            let canMove = false;
-            const myPieces = pieces[myPlayerNumber];
+            document.getElementById('game-msg').innerText = `شما ${currentDice} آوردید.`;
+            updateUI(); 
             
-            if (currentDice === 6 && myPieces.includes(-1)) { canMove = true; } 
-            else {
-                for (let pos of myPieces) {
-                    if (pos !== -1 && pos !== totalPathLength && pos + currentDice <= totalPathLength) { 
-                        canMove = true; 
-                        break; 
-                    }
-                }
-            }
-
-            if (canMove) {
-                document.getElementById('game-msg').innerText = `شما ${currentDice} آوردید. یک مهره انتخاب کنید.`;
-                updateUI(); 
-            } else {
-                document.getElementById('game-msg').innerText = `شما ${currentDice} آوردید. حرکتی ممکن نیست!`;
-                setTimeout(() => { 
-                    socket.emit('end-turn', { dice: 1 }); 
-                }, 1500);
+            // اگر حرکت ممکن نبود (تست ساده)
+            if (currentDice !== 6 && pieces[myPlayerNumber].every(p => p === -1)) {
+                setTimeout(() => { socket.emit('end-turn', { dice: 1 }); }, 1500);
             }
         }
 
         socket.on('opponent-dice', (data) => {
-            updateDiceDisplay(data.dice);
             document.getElementById('game-msg').innerText = `حریف ${data.dice} آورد.`;
         });
 
+        // تابع ساده برای حرکت (فعلا برای تست)
         function selectPiece(pieceIndex) {
             if (!isMyTurn || !hasRolled) return;
-            const currentPos = pieces[myPlayerNumber][pieceIndex];
-
-            // 🚨 اگر مهره توی خونه اولیه است و ۶ نیاورده، اجازه نده
-            if (currentPos === -1 && currentDice !== 6) return; 
-            if (currentPos !== -1 && currentPos !== totalPathLength && currentPos + currentDice > totalPathLength) return; 
-
-            // 🚨 اگر ۶ آورد و مهره توی خونه بود، مهره رو روی خونه شروع (0) بذار
-            let newPos = (currentPos === -1) ? 0 : currentPos + currentDice;
-            if (newPos > totalPathLength) newPos = totalPathLength;
-
-            pieces[myPlayerNumber][pieceIndex] = newPos;
-
-            let opponentPlayerNum = (myPlayerNumber === 1) ? 2 : 1;
-            let killedPieceIndex = -1;
-
-            if (newPos < totalPathLength && newPos >= 0) {
-                pieces[opponentPlayerNum].forEach((oppPos, oppIndex) => {
-                    if (oppPos === newPos) {
-                        pieces[opponentPlayerNum][oppIndex] = -1;
-                        killedPieceIndex = oppIndex;
-                    }
-                });
-            }
-
-            socket.emit('make-move', { 
-                player: myPlayerNumber, 
-                pieceIndex: pieceIndex, 
-                newPos: newPos,
-                killed: { player: opponentPlayerNum, pieceIndex: killedPieceIndex, newPos: -1 }
-            });
-
-            let winCount = pieces[myPlayerNumber].filter(p => p === totalPathLength).length;
-            if (winCount === 4) {
-                socket.emit('end-turn', { winner: myPlayerNumber });
-                return;
-            }
-
-            if (currentDice === 6) {
-                socket.emit('end-turn', { dice: 6 }); 
-            } else {
-                socket.emit('end-turn', { dice: 1 }); 
+            // منطق ساده برای اینکه مهره از خونه بیاد بیرون
+            if (currentDice === 6 && pieces[myPlayerNumber][pieceIndex] === -1) {
+                pieces[myPlayerNumber][pieceIndex] = 0; // فعلا 0 رو میذاریم
+                socket.emit('make-move', { player: myPlayerNumber, pieceIndex: pieceIndex, newPos: 0 });
+                socket.emit('end-turn', { dice: 6 });
             }
         }
 
         socket.on('opponent-move', (data) => {
             pieces[data.player][data.pieceIndex] = data.newPos;
-            if (data.killed && data.killed.pieceIndex !== -1) {
-                pieces[data.killed.player][data.killed.pieceIndex] = -1;
-            }
             updateUI();
         });
 
@@ -308,32 +199,14 @@
             document.querySelectorAll('.piece').forEach(p => p.remove());
             
             for (let p = 1; p <= 2; p++) {
-                const currentPath = (p === 1) ? pathP1 : pathP2;
-                const currentHome = (p === 1) ? homeP1 : homeP2;
-
                 pieces[p].forEach((pos, index) => {
                     if (pos !== -1) {
-                        let cellIndex;
-                        // 🚨 منطق پیدا کردن خونه بر اساس مسیر
-                        if (pos >= totalPathLength) {
-                            cellIndex = redFinalIndex; // مرکز
-                        } else if (pos >= currentPath.length) {
-                            cellIndex = currentHome[pos - currentPath.length];
-                        } else {
-                            cellIndex = currentPath[pos];
-                        }
-
+                        // فعلا مهره رو روی همون خونه شماره 0 نشون میدیم
+                        const cellIndex = pos; 
                         const cell = document.querySelector(`.cell[data-index="${cellIndex}"]`);
                         if (cell) {
                             const pieceDiv = document.createElement('div');
                             pieceDiv.classList.add('piece', `p${p}`);
-                            if (pos === totalPathLength) pieceDiv.classList.add('finished');
-
-                            if (p === myPlayerNumber && isMyTurn && hasRolled) {
-                                if ((pos === -1 && currentDice === 6) || (pos !== totalPathLength && pos + currentDice <= totalPathLength)) {
-                                    pieceDiv.classList.add('highlight');
-                                }
-                            }
                             if (p === myPlayerNumber) pieceDiv.onclick = () => selectPiece(index);
                             cell.appendChild(pieceDiv);
                         }
@@ -351,10 +224,7 @@
                     if (pos === -1) {
                         const hp = document.createElement('div');
                         hp.classList.add('home-piece', `p${p}`);
-                        if (p === myPlayerNumber && isMyTurn && hasRolled && currentDice === 6) {
-                            hp.classList.add('highlight');
-                            hp.onclick = () => selectPiece(index);
-                        }
+                        hp.onclick = () => selectPiece(index);
                         container.appendChild(hp);
                     }
                 });
