@@ -24,49 +24,23 @@
         .cell.red-start { background-color: #ff4444; }
         .cell.blue-start { background-color: #4444ff; }
         
-        /* استایل کاراکترها (مهره‌ها) */
-        .piece { 
-            width: 100%; height: 100%; 
-            display: flex; align-items: center; justify-content: center;
-            font-size: 24px; /* سایز کاراکتر */
-            position: absolute; z-index: 10; cursor: pointer;
-            transition: transform 0.2s; /* انیمیشن حرکت */
-        }
-        /* کاراکتر بازیکن ۱ (قرمز) و ۲ (آبی) */
-        .piece.p1::after { content: '🐱'; } /* گربه برای قرمز */
-        .piece.p2::after { content: '🐶'; } /* سگ برای آبی */
-        
-        .piece.highlight { 
-            border: 2px solid yellow; 
-            border-radius: 50%;
-            box-shadow: 0 0 15px yellow; 
-            transform: scale(1.2); 
-            animation: bounce 0.5s infinite alternate;
-        }
+        .piece { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 24px; position: absolute; z-index: 10; cursor: pointer; }
+        .piece.p1::after { content: '🐱'; }
+        .piece.p2::after { content: '🐶'; }
+        .piece.highlight { border: 2px solid yellow; border-radius: 50%; box-shadow: 0 0 15px yellow; transform: scale(1.2); animation: bounce 0.5s infinite alternate; }
 
-        @keyframes bounce {
-            from { transform: scale(1.1); }
-            to { transform: scale(1.3); }
-        }
+        @keyframes bounce { from { transform: scale(1.1); } to { transform: scale(1.3); } }
 
-        /* تاس */
         .dice-container { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; max-width: 400px; }
         .dice { width: 60px; height: 60px; background: white; border-radius: 10px; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); padding: 8px; gap: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
         .dot { background: black; border-radius: 50%; width: 100%; height: 100%; display: none; }
         .dot.visible { display: block; }
 
-        /* مهره‌های خونه (کاراکترهای منتظر) */
         .home-pieces { display: flex; justify-content: center; gap: 15px; margin-bottom: 10px; }
         .home-piece { width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; font-size: 24px; border-radius: 50%; border: 2px solid #fff; transition: 0.2s; background: #0f172a; }
         .home-piece.p1::after { content: '🐱'; }
         .home-piece.p2::after { content: '🐶'; }
-        
-        .home-piece.highlight { 
-            border: 2px solid yellow; 
-            box-shadow: 0 0 15px yellow; 
-            transform: scale(1.2); 
-            cursor: pointer; 
-        }
+        .home-piece.highlight { border: 2px solid yellow; box-shadow: 0 0 15px yellow; transform: scale(1.2); cursor: pointer; }
 
         #turn-text { font-size: 16px; font-weight: bold; color: #fbbf24; margin-bottom: 10px; text-align: center; }
         #game-msg { color: #94a3b8; font-size: 14px; margin-bottom: 10px; text-align: center; min-height: 20px; }
@@ -166,11 +140,7 @@
         socket.on('game-started', (data) => {
             document.getElementById('main-menu').classList.add('hidden');
             document.getElementById('game-area').classList.remove('hidden');
-            if (data.requester === myId) {
-                myPlayerNumber = 1; 
-            } else {
-                myPlayerNumber = 2; 
-            }
+            if (data.requester === myId) { myPlayerNumber = 1; } else { myPlayerNumber = 2; }
             updateUI();
             if (data.turn === myId) {
                 isMyTurn = true;
@@ -183,7 +153,6 @@
             }
         });
 
-        // دریافت تغییر نوبت
         socket.on('turn-changed', (data) => {
             if (data.nextTurn === myId) {
                 isMyTurn = true;
@@ -208,26 +177,19 @@
 
         function rollDice() {
             if (!isMyTurn || hasRolled) return;
-            
             currentDice = Math.floor(Math.random() * 6) + 1;
             updateDiceDisplay(currentDice);
             hasRolled = true;
             document.getElementById('roll-btn').disabled = true;
-            
             socket.emit('dice-rolled', { dice: currentDice });
 
-            // چک کردن اینکه آیا حرکت ممکنه یا نه
             let canMove = false;
             const myPieces = pieces[myPlayerNumber];
             
-            if (currentDice === 6 && myPieces.includes(-1)) {
-                canMove = true; 
-            } else {
+            if (currentDice === 6 && myPieces.includes(-1)) { canMove = true; } 
+            else {
                 for (let pos of myPieces) {
-                    if (pos !== -1 && pos + currentDice <= totalPathLength) {
-                        canMove = true; 
-                        break;
-                    }
+                    if (pos !== -1 && pos + currentDice <= totalPathLength) { canMove = true; break; }
                 }
             }
 
@@ -235,9 +197,9 @@
                 document.getElementById('game-msg').innerText = `شما ${currentDice} آوردید. یک مهره انتخاب کنید.`;
                 updateUI(); 
             } else {
-                // 🚨 راه حل اصلی: اگر حرکتی ممکن نیست، مستقیم به سرور میگیم نوبت تموم شد (با ارسال ۱ به جای ۶)
                 document.getElementById('game-msg').innerText = `شما ${currentDice} آوردید. حرکتی ممکن نیست!`;
                 setTimeout(() => { 
+                    // ⚠️ ارسال سیگنال تغییر نوبت به سرور
                     socket.emit('end-turn', { dice: 1 }); 
                 }, 1500);
             }
@@ -248,24 +210,18 @@
             document.getElementById('game-msg').innerText = `حریف ${data.dice} آورد.`;
         });
 
-        // حرکت مهره
         function selectPiece(pieceIndex) {
             if (!isMyTurn || !hasRolled) return;
             const currentPos = pieces[myPlayerNumber][pieceIndex];
-
             if (currentPos === -1 && currentDice !== 6) return; 
             if (currentPos !== -1 && currentPos + currentDice > totalPathLength) return; 
 
-            let newPos;
-            if (currentPos === -1) newPos = 0;
-            else newPos = currentPos + currentDice;
-
+            let newPos = (currentPos === -1) ? 0 : currentPos + currentDice;
             pieces[myPlayerNumber][pieceIndex] = newPos;
             socket.emit('make-move', { player: myPlayerNumber, pieceIndex: pieceIndex, newPos: newPos });
 
             if (newPos === totalPathLength) alert("🎉 تبریک! شما برنده شدید!");
 
-            // 🚨 بعد از حرکت، حتماً به سرور میگیم نوبت تموم شد
             if (currentDice === 6) {
                 socket.emit('end-turn', { dice: 6 }); 
             } else {
@@ -280,7 +236,6 @@
 
         function updateUI() {
             document.querySelectorAll('.piece').forEach(p => p.remove());
-            
             for (let p = 1; p <= 2; p++) {
                 pieces[p].forEach((pos, index) => {
                     let cellIndex = null;
@@ -292,13 +247,9 @@
                         if (cell) {
                             const pieceDiv = document.createElement('div');
                             pieceDiv.classList.add('piece', `p${p}`);
-                            
                             if (p === myPlayerNumber && isMyTurn && hasRolled) {
-                                if ((pos === -1 && currentDice === 6) || (pos !== -1 && pos + currentDice <= totalPathLength)) {
-                                    pieceDiv.classList.add('highlight');
-                                }
+                                if ((pos === -1 && currentDice === 6) || (pos !== -1 && pos + currentDice <= totalPathLength)) pieceDiv.classList.add('highlight');
                             }
-                            
                             if (p === myPlayerNumber) pieceDiv.onclick = () => selectPiece(index);
                             cell.appendChild(pieceDiv);
                         }
@@ -316,7 +267,6 @@
                     if (pos === -1) {
                         const hp = document.createElement('div');
                         hp.classList.add('home-piece', `p${p}`);
-                        
                         if (p === myPlayerNumber && isMyTurn && hasRolled && currentDice === 6) {
                             hp.classList.add('highlight');
                             hp.onclick = () => selectPiece(index);
