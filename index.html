@@ -22,13 +22,11 @@
         
         .cell { background-color: white; border-radius: 50%; border: 1px solid #333; display: flex; align-items: center; justify-content: center; position: relative; color: #555; font-size: 12px; font-weight: bold;}
         
-        /* رنگ خونه‌های شروع و نهایی */
         .cell.red-start { background-color: #ff4444; color: white;}
         .cell.blue-start { background-color: #4444ff; color: white;}
         .cell.red-home { background-color: #ff9999; border: 2px solid #ff0000; }
         .cell.blue-home { background-color: #9999ff; border: 2px solid #0000ff; }
         
-        /* مهره‌ها */
         .piece { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 22px; position: absolute; z-index: 10; cursor: pointer; transition: transform 0.2s; }
         .piece.p1::after { content: '🐱'; }
         .piece.p2::after { content: '🐶'; }
@@ -50,6 +48,16 @@
 
         #turn-text { font-size: 16px; font-weight: bold; color: #fbbf24; margin-bottom: 10px; text-align: center; }
         #game-msg { color: #94a3b8; font-size: 14px; margin-bottom: 10px; text-align: center; min-height: 20px; }
+
+        /* 🚨 استایل دکمه میکروفون */
+        #mic-btn {
+            position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px;
+            border-radius: 50%; font-size: 30px; background: #334155; border: 2px solid #94a3b8;
+            display: flex; align-items: center; justify-content: center; z-index: 100;
+            cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+        #mic-btn.active { background: #ef4444; border-color: #fca5a5; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
     </style>
 </head>
 <body>
@@ -91,6 +99,10 @@
         </div>
     </div>
 
+    <!-- 🚨 دکمه میکروفون -->
+    <div id="mic-btn" class="hidden" onclick="toggleMic()">🎤</div>
+    <audio id="remote-audio" autoplay></audio>
+
     <script>
         const socket = io("https://manch-server.onrender.com");
         let myId = null;
@@ -99,24 +111,19 @@
         let currentDice = 0;
         let hasRolled = false; 
 
-        // ۳ مهره برای هر بازیکن
         let pieces = { 1: [-1, -1, -1], 2: [-1, -1, -1] };
 
         const deletedCells = [37, 38, 39, 40, 41, 42, 43];
-
-        // مسیر قرمز
         const pathP1 = [4, 3, 12, 21, 30, 29, 28, 27, 36, 45, 46, 47, 48, 57, 66, 75, 76, 77, 68, 59, 50, 51, 52, 53, 44, 35, 34, 33, 32, 23, 14, 5, 13, 22, 31];
-        
-        // مسیر آبی (بدون ۷۶ اولی)
         const pathP2 = [77, 68, 59, 50, 51, 52, 53, 44, 35, 34, 33, 32, 23, 14, 5, 4, 3, 12, 21, 30, 29, 28, 27, 36, 45, 46, 47, 48, 57, 66, 75, 67, 58, 49];
 
         const startPointP1 = 4;
         const startPointP2 = 76;
-
         const totalPathLength = pathP1.length - 1; 
 
         const board = document.getElementById('game-board');
 
+        // ساخت زمین
         for (let i = 0; i < 81; i++) {
             const cell = document.createElement('div');
             const row = Math.floor(i / 9);
@@ -130,16 +137,15 @@
                 cell.classList.add('cell');
                 cell.dataset.index = i;
                 cell.innerText = i; 
-                
                 if (i === startPointP1) cell.classList.add('red-start'); 
                 if (i === startPointP2) cell.classList.add('blue-start');
-                
                 if (i === 31) cell.classList.add('red-home');
                 if (i === 49) cell.classList.add('blue-home'); 
             }
             board.appendChild(cell);
         }
 
+        // --- بخش شبکه و اتصال ---
         socket.on('your-id', (id) => { myId = id; document.getElementById('my-id').innerText = "آیدی شما: " + id; });
         function sendRequest() { socket.emit('request-connect', document.getElementById('opponent-id').value.trim()); }
         socket.on('incoming-request', (data) => {
@@ -153,6 +159,8 @@
         socket.on('game-started', (data) => {
             document.getElementById('main-menu').classList.add('hidden');
             document.getElementById('game-area').classList.remove('hidden');
+            document.getElementById('mic-btn').classList.remove('hidden'); // نمایش دکمه میکروفون
+            
             if (data.requester === myId) { myPlayerNumber = 1; } else { myPlayerNumber = 2; }
             updateUI();
             if (data.turn === myId) {
@@ -171,7 +179,6 @@
             location.reload();
         });
 
-        // 🚨 مدیریت قطع شدن حریف
         socket.on('opponent-disconnected', () => {
             alert("حریف از بازی خارج شد! شما برنده شدید. 🎉");
             location.reload();
@@ -192,6 +199,7 @@
             updateUI();
         });
 
+        // --- تاس و حرکت ---
         function updateDiceDisplay(number) {
             const dots = ['d1','d2','d3','d4','d5','d6','d7','d8','d9'];
             dots.forEach(d => document.getElementById(d).classList.remove('visible'));
@@ -213,10 +221,7 @@
             if (currentDice === 6 && myPieces.includes(-1)) { canMove = true; } 
             else {
                 for (let pos of myPieces) {
-                    if (pos !== -1 && pos !== totalPathLength && pos + currentDice <= totalPathLength) { 
-                        canMove = true; 
-                        break; 
-                    }
+                    if (pos !== -1 && pos !== totalPathLength && pos + currentDice <= totalPathLength) { canMove = true; break; }
                 }
             }
 
@@ -225,9 +230,7 @@
                 updateUI(); 
             } else {
                 document.getElementById('game-msg').innerText = `شما ${currentDice} آوردید. حرکتی ممکن نیست!`;
-                setTimeout(() => { 
-                    socket.emit('end-turn', { dice: 1 }); 
-                }, 1500);
+                setTimeout(() => { socket.emit('end-turn', { dice: 1 }); }, 1500);
             }
         }
 
@@ -261,23 +264,15 @@
             }
 
             socket.emit('make-move', { 
-                player: myPlayerNumber, 
-                pieceIndex: pieceIndex, 
-                newPos: newPos,
+                player: myPlayerNumber, pieceIndex: pieceIndex, newPos: newPos,
                 killed: { player: opponentPlayerNum, pieceIndex: killedPieceIndex, newPos: -1 }
             });
 
             let winCount = pieces[myPlayerNumber].filter(p => p === totalPathLength).length;
-            if (winCount === 3) {
-                socket.emit('end-turn', { winner: myPlayerNumber });
-                return;
-            }
+            if (winCount === 3) { socket.emit('end-turn', { winner: myPlayerNumber }); return; }
 
-            if (currentDice === 6) {
-                socket.emit('end-turn', { dice: 6 }); 
-            } else {
-                socket.emit('end-turn', { dice: 1 }); 
-            }
+            if (currentDice === 6) socket.emit('end-turn', { dice: 6 }); 
+            else socket.emit('end-turn', { dice: 1 }); 
         }
 
         socket.on('opponent-move', (data) => {
@@ -290,29 +285,18 @@
 
         function updateUI() {
             document.querySelectorAll('.piece').forEach(p => p.remove());
-            
             for (let p = 1; p <= 2; p++) {
                 const currentPath = (p === 1) ? pathP1 : pathP2;
-
                 pieces[p].forEach((pos, index) => {
                     if (pos !== -1) {
-                        let cellIndex;
-                        if (pos >= currentPath.length) {
-                            cellIndex = currentPath[currentPath.length - 1]; 
-                        } else {
-                            cellIndex = currentPath[pos];
-                        }
-
+                        let cellIndex = (pos >= currentPath.length) ? currentPath[currentPath.length - 1] : currentPath[pos];
                         const cell = document.querySelector(`.cell[data-index="${cellIndex}"]`);
                         if (cell) {
                             const pieceDiv = document.createElement('div');
                             pieceDiv.classList.add('piece', `p${p}`);
                             if (pos >= totalPathLength) pieceDiv.classList.add('finished');
-
                             if (p === myPlayerNumber && isMyTurn && hasRolled) {
-                                if ((pos === -1 && currentDice === 6) || (pos !== totalPathLength && pos + currentDice <= totalPathLength)) {
-                                    pieceDiv.classList.add('highlight');
-                                }
+                                if ((pos === -1 && currentDice === 6) || (pos !== totalPathLength && pos + currentDice <= totalPathLength)) pieceDiv.classList.add('highlight');
                             }
                             if (p === myPlayerNumber) pieceDiv.onclick = () => selectPiece(index);
                             cell.appendChild(pieceDiv);
@@ -340,6 +324,103 @@
                 });
             }
         }
+
+        // ==========================================
+        // 🎙️ بخش WebRTC (تماس صوتی Peer-to-Peer)
+        // ==========================================
+        let localStream = null;
+        let peerConnection = null;
+        let isMicActive = false;
+
+        const configuration = { 
+            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] // سرور STUN گوگل برای پیدا کردن IP
+        };
+
+        async function toggleMic() {
+            const micBtn = document.getElementById('mic-btn');
+
+            if (!isMicActive) {
+                // روشن کردن میکروفون
+                try {
+                    localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    micBtn.classList.add('active');
+                    micBtn.innerText = '🔴'; // نشانگر روشن بودن
+                    isMicActive = true;
+
+                    // اگر peerConnection قبلی وجود ندارد، بساز
+                    if (!peerConnection) createPeerConnection();
+
+                    // اضافه کردن میکروفون به اتصال
+                    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+                    // شروع فرآیند پیشنهاد (Offer)
+                    const offer = await peerConnection.createOffer();
+                    await peerConnection.setLocalDescription(offer);
+                    socket.emit('webrtc-signal', { type: 'offer', sdp: offer });
+
+                } catch (err) {
+                    alert("دسترسی به میکروفون امکان‌پذیر نیست. لطفاً دسترسی را بررسی کنید.");
+                    console.error(err);
+                }
+            } else {
+                // خاموش کردن میکروفون
+                if (localStream) {
+                    localStream.getTracks().forEach(track => track.stop());
+                }
+                localStream = null;
+                micBtn.classList.remove('active');
+                micBtn.innerText = '🎤';
+                isMicActive = false;
+                
+                // بستن اتصال
+                if (peerConnection) {
+                    peerConnection.close();
+                    peerConnection = null;
+                }
+            }
+        }
+
+        function createPeerConnection() {
+            peerConnection = new RTCPeerConnection(configuration);
+
+            // وقتی استریم صوتی از حریف دریافت شد
+            peerConnection.ontrack = (event) => {
+                document.getElementById('remote-audio').srcObject = event.streams[0];
+            };
+
+            // ارسال ICE Candidates به سرور (برای پیدا کردن مسیر)
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    socket.emit('webrtc-signal', { type: 'candidate', candidate: event.candidate });
+                }
+            };
+        }
+
+        // دریافت پیام‌های WebRTC از سرور (از طرف حریف)
+        socket.on('webrtc-signal', async (data) => {
+            if (!peerConnection) createPeerConnection();
+
+            if (data.type === 'offer') {
+                // اگر حریف پیشنهاد داد، قبول کن و جواب بده
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                const answer = await peerConnection.createAnswer();
+                await peerConnection.setLocalDescription(answer);
+                socket.emit('webrtc-signal', { type: 'answer', sdp: answer });
+                
+                // برای اینکه میکروفون خودی هم کار کنه اگر حریف اول تماس گرفت
+                if (!isMicActive) {
+                    document.getElementById('mic-btn').innerText = '🎤 (تماس ورودی)';
+                }
+            } 
+            else if (data.type === 'answer') {
+                // اگر حریف جواب داد، اتصال رو کامل کن
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+            } 
+            else if (data.type === 'candidate') {
+                // اضافه کردن اطلاعات شبکه‌ای حریف
+                await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+            }
+        });
     </script>
 </body>
 </html>
