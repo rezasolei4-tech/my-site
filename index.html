@@ -20,7 +20,6 @@
         #game-board { display: grid; grid-template-columns: repeat(9, 1fr); grid-template-rows: repeat(9, 1fr); gap: 2px; width: 100%; height: 100%; }
         .empty-space { background: transparent; }
         
-        /* خونه‌ها */
         .cell { background-color: white; border-radius: 50%; border: 1px solid #333; display: flex; align-items: center; justify-content: center; position: relative; color: #555; font-size: 12px; font-weight: bold;}
         
         /* 🚨 رنگ خونه‌های شروع و نهایی */
@@ -103,15 +102,24 @@
 
         let pieces = { 1: [-1, -1, -1, -1], 2: [-1, -1, -1, -1] };
 
-        // 🚨 مسیرهای دقیق (طبق اعداد روی صفحه)
-        const pathP1 = [4, 3, 12, 21, 30, 29, 28, 27, 36, 45, 46, 47, 48, 57, 66, 75, 76, 77, 68, 59, 50, 41, 32, 23, 14, 5];
-        const pathP2 = [76, 77, 68, 59, 50, 41, 32, 23, 14, 5, 4, 3, 12, 21, 30, 29, 28, 27, 36, 45, 46, 47, 48, 57, 66, 75];
+        // 🚨 لیست خونه‌هایی که قراره حذف بشن
+        const deletedCells = [37, 38, 39, 41, 42, 43];
 
-        // 🚨 مسیرهای نهایی (Home Stretch)
+        // 🚨 مسیرهای جدید (با نادیده گرفتن خونه‌های حذف شده)
+        // قرمز: از 30 میره مستقیم به 29 (چون 37,38,39 نیستن) و از 45 میره به 46 (چون 41,42,43 نیستن)
+        const pathP1 = [
+            4, 3, 12, 21, 30, 29, 28, 27, 36, 45, 46, 47, 48, 57, 66, 75, 76, 77, 68, 59, 50, 32, 23, 14, 5
+        ];
+        
+        // آبی: از 41 میره مستقیم به 32 (چون 39,38,37 نیستن) و از 46 میره به 45 (چون 43,42,41 نیستن)
+        const pathP2 = [
+            76, 77, 68, 59, 50, 32, 23, 14, 5, 4, 3, 12, 21, 30, 29, 28, 27, 36, 45, 46, 47, 48, 57, 66, 75
+        ];
+
+        // 🚨 مسیرهای نهایی (Home Stretch) - باید کمی تغییر کنن چون 31 و 49 هم ممکنه تحت تاثیر قرار بگیرن
         const homeP1 = [13, 22, 31, 40]; 
         const homeP2 = [67, 58, 49, 40]; 
 
-        // 🚨 نقطه شروع (0 در مسیر = شروع بازی)
         const startPointP1 = 4;
         const startPointP2 = 76;
 
@@ -126,12 +134,13 @@
             const isVertical = (col >= 3 && col <= 5);
             const isHorizontal = (row >= 3 && row <= 5);
 
-            if (!isVertical && !isHorizontal) {
+            // 🚨 اگر خونه جزو لیست حذف شده‌ها بود، اصلا ساخته نشه
+            if (deletedCells.includes(i) || (!isVertical && !isHorizontal)) {
                 cell.classList.add('empty-space');
             } else {
                 cell.classList.add('cell');
                 cell.dataset.index = i;
-                cell.innerText = i; // نمایش عدد روی خانه
+                cell.innerText = i; 
                 
                 if (i === startPointP1) cell.classList.add('red-start'); 
                 if (i === startPointP2) cell.classList.add('blue-start');
@@ -241,7 +250,6 @@
             if (currentPos === -1 && currentDice !== 6) return; 
             if (currentPos !== -1 && currentPos !== totalPathLength && currentPos + currentDice > totalPathLength) return; 
 
-            // 🚨 اصلاح اصلی: اگر مهره در خونه است و ۶ آمده، به خونه شروع (0) میره
             let newPos = (currentPos === -1) ? 0 : currentPos + currentDice;
             if (newPos > totalPathLength) newPos = totalPathLength;
 
