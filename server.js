@@ -62,11 +62,11 @@ io.on('connection', (socket) => {
     }
   });
 
-  // مدیریت پایان نوبت (با در نظر گرفتن قانون ۶)
+  // ⚠️ منطق جدید و ساده برای تغییر نوبت
   socket.on('end-turn', (data) => {
     for (const roomId in rooms) {
       if (roomId.includes(shortId)) {
-        // اگر ۶ آورده بود، نوبت جایزه می‌گیرد
+        // اگر بازیکن ۶ آورده باشد، نوبت جایزه می‌گیرد
         if (data && data.dice === 6) {
             io.to(onlineUsers[shortId]).emit('turn-changed', { nextTurn: shortId, bonus: true });
         } else {
