@@ -49,32 +49,21 @@
         #turn-text { font-size: 16px; font-weight: bold; color: #fbbf24; margin-bottom: 10px; text-align: center; }
         #game-msg { color: #94a3b8; font-size: 14px; margin-bottom: 10px; text-align: center; min-height: 20px; }
 
-        /* 🚨 استایل دکمه‌های پایین صفحه */
-        #controls {
-            position: fixed; bottom: 20px; left: 20px; display: flex; gap: 10px; z-index: 100;
-        }
-        .control-btn {
-            width: 50px; height: 50px; border-radius: 50%; font-size: 24px;
-            background: #334155; border: 2px solid #94a3b8; cursor: pointer;
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-        }
+        #controls { position: fixed; bottom: 20px; left: 20px; display: flex; gap: 10px; z-index: 100; }
+        .control-btn { width: 50px; height: 50px; border-radius: 50%; font-size: 24px; background: #334155; border: 2px solid #94a3b8; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
         .control-btn.active { background: #ef4444; border-color: #fca5a5; animation: pulse 1.5s infinite; }
 
-        /* 🚨 استایل کادر تماس تصویری (قابل جابه‌جایی) */
+        /* 🚨 استایل کادر تماس تصویری با پشتیبانی از Pointer Events */
         #video-container {
             position: fixed; top: 10px; right: 10px; width: 110px; height: 150px;
             background: #000; border-radius: 10px; overflow: hidden;
             display: flex; flex-direction: column; border: 2px solid #06C755;
             z-index: 200; box-shadow: 0 4px 15px rgba(0,0,0,0.7);
-            cursor: grab; /* نشانگر دست برای گرفتن */
-            touch-action: none; /* جلوگیری از اسکرول صفحه هنگام کشیدن کادر */
+            cursor: grab;
+            touch-action: none; /* 🚨 مهم‌ترین خط: جلوگیری از اسکرول صفحه هنگام لمس */
             transition: opacity 0.2s;
         }
-        #video-container:active {
-            cursor: grabbing;
-            opacity: 0.8; /* شفاف شدن هنگام جابه‌جایی */
-        }
+        #video-container:active { cursor: grabbing; opacity: 0.8; }
         
         #remote-video { width: 100%; height: 50%; object-fit: cover; background: #1e293b; border-bottom: 1px solid #334155; pointer-events: none; }
         #local-video { width: 100%; height: 50%; object-fit: cover; background: #1e293b; transform: scaleX(-1); pointer-events: none; }
@@ -121,13 +110,11 @@
         </div>
     </div>
 
-    <!-- 🚨 کادر تماس تصویری -->
     <div id="video-container" class="hidden">
         <video id="remote-video" autoplay playsinline></video>
         <video id="local-video" autoplay playsinline muted></video>
     </div>
 
-    <!-- 🚨 دکمه‌های کنترل -->
     <div id="controls">
         <div id="mic-btn" class="control-btn" onclick="toggleMic()" title="میکروفون">🎤</div>
         <div id="cam-btn" class="control-btn" onclick="toggleCam()" title="دوربین">📷</div>
@@ -350,9 +337,7 @@
             }
         }
 
-        // ==========================================
-        // 🎥 WebRTC (تماس تصویری)
-        // ==========================================
+        // WebRTC
         let localStream = null;
         let peerConnection = null;
         let isCamActive = false;
@@ -381,9 +366,7 @@
                     const offer = await peerConnection.createOffer();
                     await peerConnection.setLocalDescription(offer);
                     socket.emit('webrtc-signal', { type: 'offer', sdp: offer });
-                } catch (err) {
-                    alert("دسترسی به دوربین امکان‌پذیر نیست. لطفاً دسترسی را بررسی کنید.");
-                }
+                } catch (err) { alert("دسترسی به دوربین امکان‌پذیر نیست."); }
             } else {
                 if (localStream) localStream.getTracks().forEach(track => track.stop());
                 localStream = null;
@@ -449,50 +432,63 @@
         });
 
         // ==========================================
-        // 🚨 بخش جدید: قابلیت جابه‌جایی کادر تماس تصویری (Drag & Drop)
+        // 🚨 بخش جدید: جابه‌جایی کادر با Pointer Events (برای هر دو گوشی)
         // ==========================================
-        const videoContainer = document.getElementById('video-container');
+        const dragElement = document.getElementById('video-container');
         let isDragging = false;
-        let offsetX, offsetY;
+        let startX, startY, initialLeft, initialTop;
 
-        // برای موبایل (لمس)
-        videoContainer.addEventListener('touchstart', (e) => {
+        // شروع کشیدن
+        dragElement.addEventListener('pointerdown', (e) => {
+            // اگر روی دکمه‌ها یا ویدیو کلیک شد، کاری نکن (مگر خود کادر)
             isDragging = true;
-            const touch = e.touches[0];
-            const rect = videoContainer.getBoundingClientRect();
-            offsetX = touch.clientX - rect.left;
-            offsetY = touch.clientY - rect.top;
+            dragElement.setPointerCapture(e.pointerId); // گرفتن کنترل کل لمس
+            
+            const rect = dragElement.getBoundingClientRect();
+            startX = e.clientX;
+            startY = e.clientY;
+            initialLeft = rect.left;
+            initialTop = rect.top;
+            
+            dragElement.style.cursor = 'grabbing';
         });
 
-        videoContainer.addEventListener('touchmove', (e) => {
+        // حرکت دادن
+        dragElement.addEventListener('pointermove', (e) => {
             if (!isDragging) return;
-            e.preventDefault(); // جلوگیری از اسکرول صفحه
-            const touch = e.touches[0];
-            videoContainer.style.left = (touch.clientX - offsetX) + 'px';
-            videoContainer.style.top = (touch.clientY - offsetY) + 'px';
-            videoContainer.style.right = 'auto'; // غیرفعال کردن right برای جلوگیری از تداخل
+            
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            
+            // محاسبه موقعیت جدید
+            let newLeft = initialLeft + dx;
+            let newTop = initialTop + dy;
+            
+            // محدود کردن کادر داخل صفحه نمایش
+            const maxLeft = window.innerWidth - dragElement.offsetWidth;
+            const maxTop = window.innerHeight - dragElement.offsetHeight;
+            
+            if (newLeft < 0) newLeft = 0;
+            if (newTop < 0) newTop = 0;
+            if (newLeft > maxLeft) newLeft = maxLeft;
+            if (newTop > maxTop) newTop = maxTop;
+
+            // اعمال موقعیت
+            dragElement.style.left = newLeft + 'px';
+            dragElement.style.top = newTop + 'px';
+            dragElement.style.right = 'auto'; // غیرفعال کردن right
         });
 
-        videoContainer.addEventListener('touchend', () => {
+        // پایان کشیدن
+        dragElement.addEventListener('pointerup', (e) => {
+            if (!isDragging) return;
             isDragging = false;
+            dragElement.releasePointerCapture(e.pointerId);
+            dragElement.style.cursor = 'grab';
         });
 
-        // برای کامپیوتر (ماوس)
-        videoContainer.addEventListener('mousedown', (e) => {
-            isDragging = true;
-            const rect = videoContainer.getBoundingClientRect();
-            offsetX = e.clientX - rect.left;
-            offsetY = e.clientY - rect.top;
-        });
-
-        document.addEventListener('mousemove', (e) => {
-            if (!isDragging) return;
-            videoContainer.style.left = (e.clientX - offsetX) + 'px';
-            videoContainer.style.top = (e.clientY - offsetY) + 'px';
-            videoContainer.style.right = 'auto';
-        });
-
-        document.addEventListener('mouseup', () => {
+        // اگر لمس به بیرون از کادر رفت
+        dragElement.addEventListener('pointercancel', (e) => {
             isDragging = false;
         });
     </script>
