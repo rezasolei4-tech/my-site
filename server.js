@@ -62,15 +62,15 @@ io.on('connection', (socket) => {
     }
   });
 
-  // ⚠️ منطق تغییر نوبت (فقط همین یک بخش مسئول چرخش نوبت است)
+  // ⚠️ این بخش باید دقیقا همین باشه
   socket.on('end-turn', (data) => {
     for (const roomId in rooms) {
       if (roomId.includes(shortId)) {
         if (data && data.dice === 6) {
-            // اگر ۶ آورده، دوباره خودش بازی می‌کند
+            // نوبت جایزه
             io.to(onlineUsers[shortId]).emit('turn-changed', { nextTurn: shortId });
         } else {
-            // در غیر این صورت نوبت به حریف می‌رسد
+            // تغییر نوبت
             rooms[roomId].currentTurn = (rooms[roomId].currentTurn === shortId) ? rooms[roomId].accepter : rooms[roomId].requester;
             io.to(roomId).emit('turn-changed', { nextTurn: rooms[roomId].currentTurn });
         }
