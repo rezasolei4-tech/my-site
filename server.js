@@ -8,50 +8,55 @@ const io = new Server(server, {
   cors: { origin: "*", methods: ["GET", "POST"] }
 });
 
-// لیست کاربرانی که آنلاین هستند
 let onlineUsers = {};
+let rooms = {}; // برای نگه داشتن اطلاعات اتاق‌ها
 
 io.on('connection', (socket) => {
-  // ساخت یک آیدی کوتاه ۴ رقمی تصادفی
   let shortId = Math.floor(1000 + Math.random() * 9000).toString();
-  
-  // اطمینان از تکراری نبودن آیدی
   while (onlineUsers[shortId]) {
     shortId = Math.floor(1000 + Math.random() * 9000).toString();
   }
 
-  // ذخیره کاربر با آیدی کوتاه و اتصال سوکت
   onlineUsers[shortId] = socket.id;
-  socket.join(shortId); // کاربر وارد اتاق خودش می‌شود
-
-  // فرستادن آیدی کوتاه به کاربر
+  socket.join(shortId);
   socket.emit('your-id', shortId);
 
-  // وقتی کاربر می‌خواهد به حریف وصل شود
   socket.on('request-connect', (opponentId) => {
     if (onlineUsers[opponentId]) {
-      // درخواست رو به حریف می‌فرستیم
       io.to(onlineUsers[opponentId]).emit('incoming-request', { from: shortId });
     } else {
-      socket.emit('error-msg', 'کاربر مورد نظر آنلاین نیست.');
+      socket.emit('error-msg', 'کاربر آنلاین نیست.');
     }
   });
 
-  // وقتی حریف درخواست رو قبول می‌کند
   socket.on('accept-connect', (requesterId) => {
     if (onlineUsers[requesterId]) {
-      // هر دو نفر رو به یک اتاق مشترک می‌بریم
       const roomId = `${requesterId}-${shortId}`;
       socket.join(roomId);
       io.to(onlineUsers[requesterId]).socketsJoin(roomId);
       
-      // به هر دو نفر اعلام شروع بازی
-      io.to(roomId).emit('game-started', { room: roomId });
+      // ذخیره اطلاعات اتاق
+      rooms[roomId] = { requester: requesterId, accepter: shortId };
+
+      // به هر دو نفر بگو کی هستن تا نوبت‌ها مشخص بشه
+      io.to(onlineUsers[requesterId]).emit('game-started', { room: roomId, requester: requesterId });
+      socket.emit('game-started', { room: roomId, requester: requesterId });
+    }
+  });
+
+  // دریافت حرکت از یک بازیکن و ارسال به حریف
+  socket.on('make-move', (data) => {
+    // پیدا کردن اتاقی که این کاربر در آن است
+    for (const roomId in rooms) {
+      if (roomId.includes(shortId)) {
+        // ارسال حرکت به همه در اتاق به جز خود فرستنده
+        socket.to(roomId).emit('opponent-move', data);
+        break;
+      }
     }
   });
 
   socket.on('disconnect', () => {
-    // پاک کردن کاربر از لیست آنلاین
     delete onlineUsers[shortId];
   });
 });
