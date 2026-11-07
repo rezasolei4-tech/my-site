@@ -91,23 +91,25 @@
         let currentDice = 0;
         let hasRolled = false; 
 
+        // وضعیت مهره‌ها
         let pieces = {
-            1: [-1, -1, -1, -1],
-            2: [-1, -1, -1, -1] 
+            1: [-1, -1, -1, -1], 
+            2: [-1, -1, -1, -1]  
         };
 
+        // مسیر حرکت
         const path = [
             38,39,40,41,42,43,44,45,46,47,48,49,50, 
             51,52,53,54,55,56,57,58,59,60,61,62,63, 
             64,65,66,67,68,69,70,71,72,73,74,75,76, 
             77,78,79,80,3,4,5,6,7,8,9,10,11          
         ];
-
         const homeStretch = [12, 21, 30, 39, 48]; 
-        const totalPathLength = path.length + homeStretch.length - 1; // 56
+        const totalPathLength = path.length + homeStretch.length - 1; 
 
         const board = document.getElementById('game-board');
 
+        // ساخت زمین
         for (let i = 0; i < 81; i++) {
             const cell = document.createElement('div');
             const row = Math.floor(i / 9);
@@ -126,6 +128,7 @@
             board.appendChild(cell);
         }
 
+        // --- شبکه و اتصال ---
         socket.on('your-id', (id) => { myId = id; document.getElementById('my-id').innerText = "آیدی شما: " + id; });
         function sendRequest() { socket.emit('request-connect', document.getElementById('opponent-id').value.trim()); }
         socket.on('incoming-request', (data) => {
@@ -145,7 +148,6 @@
                 myPlayerNumber = 2; 
             }
             updateUI();
-            // نوبت اول برای کسی که درخواست داده
             if (data.turn === myId) {
                 isMyTurn = true;
                 document.getElementById('turn-text').innerText = "شما شروع می‌کنید! تاس بیندازید.";
@@ -157,12 +159,16 @@
             }
         });
 
-        // دریافت تغییر نوبت از سرور
+        // دریافت تغییر نوبت (با مدیریت نوبت جایزه)
         socket.on('turn-changed', (data) => {
             if (data.nextTurn === myId) {
                 isMyTurn = true;
                 hasRolled = false;
-                document.getElementById('turn-text').innerText = "نوبت شماست! تاس بیندازید.";
+                if (data.bonus) {
+                    document.getElementById('turn-text').innerText = "شما ۶ آوردید! دوباره تاس بیندازید.";
+                } else {
+                    document.getElementById('turn-text').innerText = "نوبت شماست! تاس بیندازید.";
+                }
                 document.getElementById('roll-btn').disabled = false;
                 document.getElementById('roll-btn').innerText = "انداختن تاس";
             } else {
@@ -173,6 +179,7 @@
             updateUI();
         });
 
+        // --- تاس ---
         function updateDiceDisplay(number) {
             const dots = ['d1','d2','d3','d4','d5','d6','d7','d8','d9'];
             dots.forEach(d => document.getElementById(d).classList.remove('visible'));
@@ -190,6 +197,7 @@
             
             socket.emit('dice-rolled', { dice: currentDice });
 
+            // بررسی اینکه آیا حرکت ممکن است
             let canMove = false;
             const myPieces = pieces[myPlayerNumber];
             
@@ -209,9 +217,8 @@
                 updateUI(); 
             } else {
                 document.getElementById('game-msg').innerText = `شما ${currentDice} آوردید. حرکتی ممکن نیست!`;
-                // به سرور بگو نوبت رو عوض کنه
                 setTimeout(() => { 
-                    socket.emit('end-turn');
+                    socket.emit('end-turn', { dice: currentDice }); // ارسال تاس به سرور
                 }, 1500);
             }
         }
@@ -221,6 +228,7 @@
             document.getElementById('game-msg').innerText = `حریف ${data.dice} آورد.`;
         });
 
+        // --- حرکت مهره ---
         function selectPiece(pieceIndex) {
             if (!isMyTurn || !hasRolled) return;
             const currentPos = pieces[myPlayerNumber][pieceIndex];
@@ -237,8 +245,8 @@
 
             if (newPos === totalPathLength) alert("🎉 تبریک! شما برنده شدید!");
 
-            // بعد از حرکت، نوبت رو به سرور می‌سپاریم
-            socket.emit('end-turn');
+            // بعد از حرکت، پایان نوبت را با تاس فعلی اعلام میکنیم
+            socket.emit('end-turn', { dice: currentDice });
         }
 
         socket.on('opponent-move', (data) => {
@@ -246,6 +254,7 @@
             updateUI();
         });
 
+        // --- آپدیت UI ---
         function updateUI() {
             document.querySelectorAll('.piece').forEach(p => p.remove());
             
