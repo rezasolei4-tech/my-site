@@ -33,19 +33,18 @@ io.on('connection', (socket) => {
       socket.join(roomId);
       io.to(onlineUsers[requesterId]).socketsJoin(roomId);
       
-      // ذخیره اطلاعات اتاق و نوبت
+      // ذخیره اطلاعات اتاق و شروع نوبت با درخواست دهنده
       rooms[roomId] = { 
         requester: requesterId, 
         accepter: shortId,
-        currentTurn: requesterId // بازیکن اول شروع می‌کند
+        currentTurn: requesterId 
       };
       
-      io.to(onlineUsers[requesterId]).emit('game-started', { room: roomId, requester: requesterId, turn: requesterId });
-      socket.emit('game-started', { room: roomId, requester: requesterId, turn: requesterId });
+      io.to(onlineUsers[requesterId]).emit('game-started', { requester: requesterId, turn: requesterId });
+      socket.emit('game-started', { requester: requesterId, turn: requesterId });
     }
   });
 
-  // مدیریت ارسال تاس
   socket.on('dice-rolled', (data) => {
     for (const roomId in rooms) {
       if (roomId.includes(shortId)) {
@@ -55,7 +54,6 @@ io.on('connection', (socket) => {
     }
   });
 
-  // مدیریت حرکت مهره
   socket.on('make-move', (data) => {
     for (const roomId in rooms) {
       if (roomId.includes(shortId)) {
@@ -65,13 +63,13 @@ io.on('connection', (socket) => {
     }
   });
 
-  // مدیریت پایان نوبت (وقتی کسی نمی‌تونه حرکت کنه)
+  // دریافت دستور پایان نوبت
   socket.on('end-turn', () => {
     for (const roomId in rooms) {
       if (roomId.includes(shortId)) {
-        // نوبت رو عوض کن
+        // تغییر نوبت
         rooms[roomId].currentTurn = (rooms[roomId].currentTurn === shortId) ? rooms[roomId].accepter : rooms[roomId].requester;
-        // به هر دو نفر بگو نوبت عوض شد
+        // ارسال به همه در اتاق که نوبت عوض شد
         io.to(roomId).emit('turn-changed', { nextTurn: rooms[roomId].currentTurn });
         break;
       }
