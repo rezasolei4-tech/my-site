@@ -24,21 +24,49 @@
         .cell.red-start { background-color: #ff4444; }
         .cell.blue-start { background-color: #4444ff; }
         
-        .piece { width: 85%; height: 85%; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 5px rgba(0,0,0,0.5); position: absolute; z-index: 10; cursor: pointer; }
-        .piece.p1 { background-color: #ff0000; }
-        .piece.p2 { background-color: #0000ff; }
-        .piece.highlight { border: 3px solid yellow; box-shadow: 0 0 15px yellow; transform: scale(1.1); }
+        /* استایل کاراکترها (مهره‌ها) */
+        .piece { 
+            width: 100%; height: 100%; 
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px; /* سایز کاراکتر */
+            position: absolute; z-index: 10; cursor: pointer;
+            transition: transform 0.2s; /* انیمیشن حرکت */
+        }
+        /* کاراکتر بازیکن ۱ (قرمز) و ۲ (آبی) */
+        .piece.p1::after { content: '🐱'; } /* گربه برای قرمز */
+        .piece.p2::after { content: '🐶'; } /* سگ برای آبی */
+        
+        .piece.highlight { 
+            border: 2px solid yellow; 
+            border-radius: 50%;
+            box-shadow: 0 0 15px yellow; 
+            transform: scale(1.2); 
+            animation: bounce 0.5s infinite alternate;
+        }
 
+        @keyframes bounce {
+            from { transform: scale(1.1); }
+            to { transform: scale(1.3); }
+        }
+
+        /* تاس */
         .dice-container { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; max-width: 400px; }
         .dice { width: 60px; height: 60px; background: white; border-radius: 10px; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); padding: 8px; gap: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
         .dot { background: black; border-radius: 50%; width: 100%; height: 100%; display: none; }
         .dot.visible { display: block; }
 
+        /* مهره‌های خونه (کاراکترهای منتظر) */
         .home-pieces { display: flex; justify-content: center; gap: 15px; margin-bottom: 10px; }
-        .home-piece { width: 35px; height: 35px; border-radius: 50%; border: 2px solid #fff; transition: 0.2s; }
-        .home-piece.p1 { background-color: #ff0000; }
-        .home-piece.p2 { background-color: #0000ff; }
-        .home-piece.highlight { border: 3px solid yellow; box-shadow: 0 0 15px yellow; transform: scale(1.1); cursor: pointer; }
+        .home-piece { width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; font-size: 24px; border-radius: 50%; border: 2px solid #fff; transition: 0.2s; background: #0f172a; }
+        .home-piece.p1::after { content: '🐱'; }
+        .home-piece.p2::after { content: '🐶'; }
+        
+        .home-piece.highlight { 
+            border: 2px solid yellow; 
+            box-shadow: 0 0 15px yellow; 
+            transform: scale(1.2); 
+            cursor: pointer; 
+        }
 
         #turn-text { font-size: 16px; font-weight: bold; color: #fbbf24; margin-bottom: 10px; text-align: center; }
         #game-msg { color: #94a3b8; font-size: 14px; margin-bottom: 10px; text-align: center; min-height: 20px; }
@@ -155,7 +183,7 @@
             }
         });
 
-        // ⚠️ دریافت تغییر نوبت
+        // دریافت تغییر نوبت
         socket.on('turn-changed', (data) => {
             if (data.nextTurn === myId) {
                 isMyTurn = true;
@@ -188,6 +216,7 @@
             
             socket.emit('dice-rolled', { dice: currentDice });
 
+            // چک کردن اینکه آیا حرکت ممکنه یا نه
             let canMove = false;
             const myPieces = pieces[myPlayerNumber];
             
@@ -206,6 +235,7 @@
                 document.getElementById('game-msg').innerText = `شما ${currentDice} آوردید. یک مهره انتخاب کنید.`;
                 updateUI(); 
             } else {
+                // 🚨 راه حل اصلی: اگر حرکتی ممکن نیست، مستقیم به سرور میگیم نوبت تموم شد (با ارسال ۱ به جای ۶)
                 document.getElementById('game-msg').innerText = `شما ${currentDice} آوردید. حرکتی ممکن نیست!`;
                 setTimeout(() => { 
                     socket.emit('end-turn', { dice: 1 }); 
@@ -218,6 +248,7 @@
             document.getElementById('game-msg').innerText = `حریف ${data.dice} آورد.`;
         });
 
+        // حرکت مهره
         function selectPiece(pieceIndex) {
             if (!isMyTurn || !hasRolled) return;
             const currentPos = pieces[myPlayerNumber][pieceIndex];
@@ -234,7 +265,7 @@
 
             if (newPos === totalPathLength) alert("🎉 تبریک! شما برنده شدید!");
 
-            // ⚠️ ارسال نتیجه نوبت
+            // 🚨 بعد از حرکت، حتماً به سرور میگیم نوبت تموم شد
             if (currentDice === 6) {
                 socket.emit('end-turn', { dice: 6 }); 
             } else {
