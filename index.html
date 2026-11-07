@@ -49,9 +49,9 @@
         #turn-text { font-size: 16px; font-weight: bold; color: #fbbf24; margin-bottom: 10px; text-align: center; }
         #game-msg { color: #94a3b8; font-size: 14px; margin-bottom: 10px; text-align: center; min-height: 20px; }
 
-        /* 🚨 استایل دکمه میکروفون */
+        /* 🚨 دکمه میکروفون همیشه روی صفحه */
         #mic-btn {
-            position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px;
+            position: fixed; bottom: 20px; left: 20px; width: 60px; height: 60px;
             border-radius: 50%; font-size: 30px; background: #334155; border: 2px solid #94a3b8;
             display: flex; align-items: center; justify-content: center; z-index: 100;
             cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
@@ -99,8 +99,8 @@
         </div>
     </div>
 
-    <!-- 🚨 دکمه میکروفون -->
-    <div id="mic-btn" class="hidden" onclick="toggleMic()">🎤</div>
+    <!-- 🚨 دکمه میکروفون (بدون کلاس hidden) -->
+    <div id="mic-btn" onclick="toggleMic()">🎤</div>
     <audio id="remote-audio" autoplay></audio>
 
     <script>
@@ -123,7 +123,6 @@
 
         const board = document.getElementById('game-board');
 
-        // ساخت زمین
         for (let i = 0; i < 81; i++) {
             const cell = document.createElement('div');
             const row = Math.floor(i / 9);
@@ -145,7 +144,6 @@
             board.appendChild(cell);
         }
 
-        // --- بخش شبکه و اتصال ---
         socket.on('your-id', (id) => { myId = id; document.getElementById('my-id').innerText = "آیدی شما: " + id; });
         function sendRequest() { socket.emit('request-connect', document.getElementById('opponent-id').value.trim()); }
         socket.on('incoming-request', (data) => {
@@ -159,8 +157,6 @@
         socket.on('game-started', (data) => {
             document.getElementById('main-menu').classList.add('hidden');
             document.getElementById('game-area').classList.remove('hidden');
-            document.getElementById('mic-btn').classList.remove('hidden'); // نمایش دکمه میکروفون
-            
             if (data.requester === myId) { myPlayerNumber = 1; } else { myPlayerNumber = 2; }
             updateUI();
             if (data.turn === myId) {
@@ -199,7 +195,6 @@
             updateUI();
         });
 
-        // --- تاس و حرکت ---
         function updateDiceDisplay(number) {
             const dots = ['d1','d2','d3','d4','d5','d6','d7','d8','d9'];
             dots.forEach(d => document.getElementById(d).classList.remove('visible'));
@@ -333,27 +328,23 @@
         let isMicActive = false;
 
         const configuration = { 
-            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] // سرور STUN گوگل برای پیدا کردن IP
+            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] 
         };
 
         async function toggleMic() {
             const micBtn = document.getElementById('mic-btn');
 
             if (!isMicActive) {
-                // روشن کردن میکروفون
                 try {
                     localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                     micBtn.classList.add('active');
-                    micBtn.innerText = '🔴'; // نشانگر روشن بودن
+                    micBtn.innerText = '🔴'; 
                     isMicActive = true;
 
-                    // اگر peerConnection قبلی وجود ندارد، بساز
                     if (!peerConnection) createPeerConnection();
 
-                    // اضافه کردن میکروفون به اتصال
                     localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
-                    // شروع فرآیند پیشنهاد (Offer)
                     const offer = await peerConnection.createOffer();
                     await peerConnection.setLocalDescription(offer);
                     socket.emit('webrtc-signal', { type: 'offer', sdp: offer });
@@ -363,7 +354,6 @@
                     console.error(err);
                 }
             } else {
-                // خاموش کردن میکروفون
                 if (localStream) {
                     localStream.getTracks().forEach(track => track.stop());
                 }
@@ -372,7 +362,6 @@
                 micBtn.innerText = '🎤';
                 isMicActive = false;
                 
-                // بستن اتصال
                 if (peerConnection) {
                     peerConnection.close();
                     peerConnection = null;
@@ -383,12 +372,10 @@
         function createPeerConnection() {
             peerConnection = new RTCPeerConnection(configuration);
 
-            // وقتی استریم صوتی از حریف دریافت شد
             peerConnection.ontrack = (event) => {
                 document.getElementById('remote-audio').srcObject = event.streams[0];
             };
 
-            // ارسال ICE Candidates به سرور (برای پیدا کردن مسیر)
             peerConnection.onicecandidate = (event) => {
                 if (event.candidate) {
                     socket.emit('webrtc-signal', { type: 'candidate', candidate: event.candidate });
@@ -396,28 +383,23 @@
             };
         }
 
-        // دریافت پیام‌های WebRTC از سرور (از طرف حریف)
         socket.on('webrtc-signal', async (data) => {
             if (!peerConnection) createPeerConnection();
 
             if (data.type === 'offer') {
-                // اگر حریف پیشنهاد داد، قبول کن و جواب بده
                 await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
                 const answer = await peerConnection.createAnswer();
                 await peerConnection.setLocalDescription(answer);
                 socket.emit('webrtc-signal', { type: 'answer', sdp: answer });
                 
-                // برای اینکه میکروفون خودی هم کار کنه اگر حریف اول تماس گرفت
                 if (!isMicActive) {
                     document.getElementById('mic-btn').innerText = '🎤 (تماس ورودی)';
                 }
             } 
             else if (data.type === 'answer') {
-                // اگر حریف جواب داد، اتصال رو کامل کن
                 await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
             } 
             else if (data.type === 'candidate') {
-                // اضافه کردن اطلاعات شبکه‌ای حریف
                 await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
             }
         });
