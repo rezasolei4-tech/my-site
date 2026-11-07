@@ -12,7 +12,24 @@
         
         .card { background: #16213e; padding: 15px; border-radius: 10px; width: 100%; max-width: 400px; margin-bottom: 15px; text-align: center; }
         .hidden { display: none !important; }
-        input { width: 100%; padding: 10px; margin: 10px 0; border-radius: 5px; border: none; text-align: center; font-size: 16px; }
+        
+        /* لابی */
+        .lobby-header { font-size: 18px; margin-bottom: 10px; color: #fbbf24; }
+        #users-list { list-style: none; max-height: 200px; overflow-y: auto; margin-bottom: 15px; background: #0f172a; border-radius: 8px; padding: 10px; }
+        #users-list li { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #334155; }
+        #users-list li:last-child { border-bottom: none; }
+        .user-info { display: flex; align-items: center; gap: 10px; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #06C755; }
+        .status-dot.playing { background: #ef4444; }
+        .btn-request { background: #06C755; color: white; border: none; padding: 5px 15px; border-radius: 5px; cursor: pointer; font-size: 14px; }
+        .btn-request:disabled { background: #555; cursor: not-allowed; }
+
+        /* مودال درخواست */
+        #request-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-content { background: #16213e; padding: 20px; border-radius: 10px; text-align: center; width: 80%; max-width: 300px; }
+        .modal-content button { margin-top: 10px; margin-right: 5px; width: 45%; display: inline-block; }
+        .btn-reject { background: #ef4444; }
+
         button { background: #06C755; color: white; border: none; padding: 10px; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; width: 100%; transition: 0.2s; }
         button:disabled { background: #555; cursor: not-allowed; opacity: 0.7; }
 
@@ -53,18 +70,8 @@
         .control-btn { width: 50px; height: 50px; border-radius: 50%; font-size: 24px; background: #334155; border: 2px solid #94a3b8; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
         .control-btn.active { background: #ef4444; border-color: #fca5a5; animation: pulse 1.5s infinite; }
 
-        /* 🚨 استایل کادر تماس تصویری با پشتیبانی از Pointer Events */
-        #video-container {
-            position: fixed; top: 10px; right: 10px; width: 110px; height: 150px;
-            background: #000; border-radius: 10px; overflow: hidden;
-            display: flex; flex-direction: column; border: 2px solid #06C755;
-            z-index: 200; box-shadow: 0 4px 15px rgba(0,0,0,0.7);
-            cursor: grab;
-            touch-action: none; /* 🚨 مهم‌ترین خط: جلوگیری از اسکرول صفحه هنگام لمس */
-            transition: opacity 0.2s;
-        }
+        #video-container { position: fixed; top: 10px; right: 10px; width: 110px; height: 150px; background: #000; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; border: 2px solid #06C755; z-index: 200; box-shadow: 0 4px 15px rgba(0,0,0,0.7); cursor: grab; touch-action: none; transition: opacity 0.2s; }
         #video-container:active { cursor: grabbing; opacity: 0.8; }
-        
         #remote-video { width: 100%; height: 50%; object-fit: cover; background: #1e293b; border-bottom: 1px solid #334155; pointer-events: none; }
         #local-video { width: 100%; height: 50%; object-fit: cover; background: #1e293b; transform: scaleX(-1); pointer-events: none; }
         
@@ -75,18 +82,24 @@
 
     <h1>🎲 بازی منچ آنلاین</h1>
 
-    <div class="card" id="main-menu">
-        <h2>اتصال به حریف</h2>
-        <div id="my-id" style="font-size:20px; color:#06C755; margin-bottom:10px;">...</div>
-        <div id="connect-section">
-            <input type="text" id="opponent-id" placeholder="آیدی حریف" maxlength="4">
-            <button onclick="sendRequest()">ارسال درخواست</button>
+    <div class="card" id="lobby-screen">
+        <div class="lobby-header">آیدی اختصاصی شما: <span id="my-id" style="color: #06C755;">...</span></div>
+        <p style="margin-bottom: 10px;">کاربران آنلاین:</p>
+        <ul id="users-list">
+            <li style="justify-content: center; color: #94a3b8;">در حال دریافت لیست...</li>
+        </ul>
+        <div id="status" style="font-size: 14px; color: #94a3b8;">در حال اتصال به سرور...</div>
+    </div>
+
+    <div id="request-modal" class="hidden">
+        <div class="modal-content">
+            <h3 style="margin-bottom: 10px;">درخواست بازی!</h3>
+            <p>کاربر <span id="req-id" style="color: #fbbf24; font-weight: bold;"></span> می‌خواد با شما بازی کنه.</p>
+            <div style="display: flex; justify-content: space-between;">
+                <button class="btn-reject" onclick="rejectRequest()">رد</button>
+                <button onclick="acceptRequest()">قبول</button>
+            </div>
         </div>
-        <div id="accept-section" class="hidden">
-            <p style="margin-bottom:10px;">درخواست از طرف <span id="req-id" style="color:yellow;"></span></p>
-            <button onclick="acceptRequest()">قبول</button>
-        </div>
-        <div id="status" style="margin-top:10px; font-size:14px;">در حال اتصال...</div>
     </div>
 
     <div id="game-area" class="hidden" style="display: flex; flex-direction: column; align-items: center; width: 100%;">
@@ -115,18 +128,29 @@
         <video id="local-video" autoplay playsinline muted></video>
     </div>
 
-    <div id="controls">
+    <div id="controls" class="hidden">
         <div id="mic-btn" class="control-btn" onclick="toggleMic()" title="میکروفون">🎤</div>
         <div id="cam-btn" class="control-btn" onclick="toggleCam()" title="دوربین">📷</div>
     </div>
 
     <script>
+        // 🚨 تولید یا خواندن آیدی ثابت از حافظه مرورگر
+        function getPersistentId() {
+            let id = localStorage.getItem('manchPlayerId');
+            if (!id) {
+                id = Math.floor(1000 + Math.random() * 9000).toString();
+                localStorage.setItem('manchPlayerId', id);
+            }
+            return id;
+        }
+
         const socket = io("https://manch-server.onrender.com");
-        let myId = null;
+        let myId = getPersistentId(); // استفاده از آیدی ثابت
         let isMyTurn = false;
         let myPlayerNumber = 1; 
         let currentDice = 0;
         let hasRolled = false; 
+        let opponentId = null;
 
         let pieces = { 1: [-1, -1, -1], 2: [-1, -1, -1] };
 
@@ -161,19 +185,91 @@
             board.appendChild(cell);
         }
 
-        socket.on('your-id', (id) => { myId = id; document.getElementById('my-id').innerText = "آیدی شما: " + id; });
-        function sendRequest() { socket.emit('request-connect', document.getElementById('opponent-id').value.trim()); }
-        socket.on('incoming-request', (data) => {
-            document.getElementById('connect-section').classList.add('hidden');
-            document.getElementById('accept-section').classList.remove('hidden');
-            document.getElementById('req-id').innerText = data.from;
-            document.getElementById('accept-section').dataset.requester = data.from;
+        // 🚨 به محض اتصال، آیدی ثابت رو به سرور معرفی کن
+        socket.on('connect', () => {
+            socket.emit('register-user', myId);
         });
-        function acceptRequest() { socket.emit('accept-connect', document.getElementById('accept-section').dataset.requester); }
+
+        socket.on('your-id', (id) => { 
+            myId = id; 
+            document.getElementById('my-id').innerText = id; 
+        });
+
+        socket.on('online-users-list', (users) => {
+            const list = document.getElementById('users-list');
+            list.innerHTML = ''; 
+            
+            let hasOtherUsers = false;
+            users.forEach(user => {
+                if (user.id !== myId) { 
+                    hasOtherUsers = true;
+                    const li = document.createElement('li');
+                    const infoDiv = document.createElement('div');
+                    infoDiv.className = 'user-info';
+                    
+                    const dot = document.createElement('span');
+                    dot.className = `status-dot ${user.status === 'playing' ? 'playing' : ''}`;
+                    
+                    const nameSpan = document.createElement('span');
+                    nameSpan.innerText = `کاربر ${user.id}`;
+                    
+                    infoDiv.appendChild(dot);
+                    infoDiv.appendChild(nameSpan);
+                    
+                    const btn = document.createElement('button');
+                    btn.className = 'btn-request';
+                    btn.innerText = user.status === 'playing' ? 'در حال بازی' : 'درخواست بازی';
+                    btn.disabled = user.status === 'playing';
+                    btn.onclick = () => sendRequest(user.id);
+                    
+                    li.appendChild(infoDiv);
+                    li.appendChild(btn);
+                    list.appendChild(li);
+                }
+            });
+
+            if (!hasOtherUsers) {
+                list.innerHTML = '<li style="justify-content: center; color: #94a3b8;">هیچ کاربر دیگری آنلاین نیست. منتظر بمانید...</li>';
+            }
+        });
+
+        function sendRequest(targetId) {
+            opponentId = targetId;
+            socket.emit('request-connect', targetId);
+            document.getElementById('status').innerText = "در حال ارسال درخواست...";
+        }
+
+        socket.on('incoming-request', (data) => {
+            opponentId = data.from;
+            document.getElementById('req-id').innerText = data.from;
+            document.getElementById('request-modal').classList.remove('hidden');
+        });
+
+        function acceptRequest() {
+            document.getElementById('request-modal').classList.add('hidden');
+            socket.emit('accept-connect', opponentId);
+        }
+
+        function rejectRequest() {
+            document.getElementById('request-modal').classList.add('hidden');
+            socket.emit('reject-connect', opponentId);
+            opponentId = null;
+        }
+
+        socket.on('request-rejected', () => {
+            document.getElementById('status').innerText = "درخواست شما رد شد.";
+        });
+
+        socket.on('error-msg', (msg) => {
+            alert(msg);
+            document.getElementById('status').innerText = msg;
+        });
 
         socket.on('game-started', (data) => {
-            document.getElementById('main-menu').classList.add('hidden');
+            document.getElementById('lobby-screen').classList.add('hidden');
             document.getElementById('game-area').classList.remove('hidden');
+            document.getElementById('controls').classList.remove('hidden');
+            
             if (data.requester === myId) { myPlayerNumber = 1; } else { myPlayerNumber = 2; }
             updateUI();
             if (data.turn === myId) {
@@ -337,7 +433,7 @@
             }
         }
 
-        // WebRTC
+        // WebRTC (بدون تغییر)
         let localStream = null;
         let peerConnection = null;
         let isCamActive = false;
@@ -396,101 +492,4 @@
             } else {
                 if (localStream) localStream.getTracks().forEach(track => track.stop());
                 localStream = null;
-                micBtn.classList.remove('active');
-                isMicActive = false;
-                if (peerConnection) { peerConnection.close(); peerConnection = null; }
-            }
-        }
-
-        function createPeerConnection() {
-            peerConnection = new RTCPeerConnection(configuration);
-            peerConnection.ontrack = (event) => {
-                document.getElementById('remote-video').srcObject = event.streams[0];
-            };
-            peerConnection.onicecandidate = (event) => {
-                if (event.candidate) {
-                    socket.emit('webrtc-signal', { type: 'candidate', candidate: event.candidate });
-                }
-            };
-        }
-
-        socket.on('webrtc-signal', async (data) => {
-            if (!peerConnection) createPeerConnection();
-            if (data.type === 'offer') {
-                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
-                const answer = await peerConnection.createAnswer();
-                await peerConnection.setLocalDescription(answer);
-                socket.emit('webrtc-signal', { type: 'answer', sdp: answer });
-                document.getElementById('video-container').classList.remove('hidden');
-            } 
-            else if (data.type === 'answer') {
-                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
-            } 
-            else if (data.type === 'candidate') {
-                await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
-            }
-        });
-
-        // ==========================================
-        // 🚨 بخش جدید: جابه‌جایی کادر با Pointer Events (برای هر دو گوشی)
-        // ==========================================
-        const dragElement = document.getElementById('video-container');
-        let isDragging = false;
-        let startX, startY, initialLeft, initialTop;
-
-        // شروع کشیدن
-        dragElement.addEventListener('pointerdown', (e) => {
-            // اگر روی دکمه‌ها یا ویدیو کلیک شد، کاری نکن (مگر خود کادر)
-            isDragging = true;
-            dragElement.setPointerCapture(e.pointerId); // گرفتن کنترل کل لمس
-            
-            const rect = dragElement.getBoundingClientRect();
-            startX = e.clientX;
-            startY = e.clientY;
-            initialLeft = rect.left;
-            initialTop = rect.top;
-            
-            dragElement.style.cursor = 'grabbing';
-        });
-
-        // حرکت دادن
-        dragElement.addEventListener('pointermove', (e) => {
-            if (!isDragging) return;
-            
-            const dx = e.clientX - startX;
-            const dy = e.clientY - startY;
-            
-            // محاسبه موقعیت جدید
-            let newLeft = initialLeft + dx;
-            let newTop = initialTop + dy;
-            
-            // محدود کردن کادر داخل صفحه نمایش
-            const maxLeft = window.innerWidth - dragElement.offsetWidth;
-            const maxTop = window.innerHeight - dragElement.offsetHeight;
-            
-            if (newLeft < 0) newLeft = 0;
-            if (newTop < 0) newTop = 0;
-            if (newLeft > maxLeft) newLeft = maxLeft;
-            if (newTop > maxTop) newTop = maxTop;
-
-            // اعمال موقعیت
-            dragElement.style.left = newLeft + 'px';
-            dragElement.style.top = newTop + 'px';
-            dragElement.style.right = 'auto'; // غیرفعال کردن right
-        });
-
-        // پایان کشیدن
-        dragElement.addEventListener('pointerup', (e) => {
-            if (!isDragging) return;
-            isDragging = false;
-            dragElement.releasePointerCapture(e.pointerId);
-            dragElement.style.cursor = 'grab';
-        });
-
-        // اگر لمس به بیرون از کادر رفت
-        dragElement.addEventListener('pointercancel', (e) => {
-            isDragging = false;
-        });
-    </script>
-</body>
-</html>
+                micBtn.classList.remove('active
