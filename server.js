@@ -62,17 +62,18 @@ io.on('connection', (socket) => {
     }
   });
 
-  // ⚠️ این بخش باید دقیقا همین باشه
+  // ⚠️ منطق جدید و بسیار ساده برای تغییر نوبت
   socket.on('end-turn', (data) => {
     for (const roomId in rooms) {
       if (roomId.includes(shortId)) {
+        // اگر ۶ آورده بود، نوبت جایزه
         if (data && data.dice === 6) {
-            // نوبت جایزه
             io.to(onlineUsers[shortId]).emit('turn-changed', { nextTurn: shortId });
         } else {
-            // تغییر نوبت
-            rooms[roomId].currentTurn = (rooms[roomId].currentTurn === shortId) ? rooms[roomId].accepter : rooms[roomId].requester;
-            io.to(roomId).emit('turn-changed', { nextTurn: rooms[roomId].currentTurn });
+            // در غیر این صورت، نوبت به حریف می‌رسد
+            let next = (rooms[roomId].currentTurn === rooms[roomId].requester) ? rooms[roomId].accepter : rooms[roomId].requester;
+            rooms[roomId].currentTurn = next;
+            io.to(roomId).emit('turn-changed', { nextTurn: next });
         }
         break;
       }
