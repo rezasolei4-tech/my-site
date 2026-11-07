@@ -8,103 +8,147 @@
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: Tahoma, sans-serif; background: linear-gradient(135deg, #1a1a2e, #16213e); color: white; text-align: center; padding: 20px; min-height: 100vh; }
-        h1 { color: #06C755; margin-bottom: 20px; font-size: 28px; }
-        .card { background: rgba(30, 41, 59, 0.8); padding: 25px; border-radius: 15px; max-width: 400px; margin: 0 auto; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        .id-box { background: #0f172a; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #06C755; font-size: 24px; font-weight: bold; color: #06C755; letter-spacing: 2px; }
-        input { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; text-align: center; font-size: 18px; letter-spacing: 1px; }
-        button.primary { width: 100%; background: #06C755; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-bottom: 10px; }
-        button.primary:hover { background: #05a648; }
-        button.danger { background: #ef4444; }
-        #status { font-size: 14px; color: #94a3b8; margin-top: 15px; min-height: 20px; }
-        .hidden { display: none; }
+        h1 { color: #06C755; margin-bottom: 20px; font-size: 26px; }
+        .card { background: rgba(30, 41, 59, 0.8); padding: 20px; border-radius: 15px; max-width: 400px; margin: 0 auto; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .id-box { background: #0f172a; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #06C755; font-size: 20px; font-weight: bold; color: #06C755; letter-spacing: 2px; }
+        input { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; text-align: center; font-size: 18px; }
+        button { background: #06C755; color: white; border: none; padding: 10px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 10px; width: 100%; }
+        button:hover { background: #05a648; }
+        #status { font-size: 14px; color: #94a3b8; margin-top: 10px; min-height: 20px; }
+        .hidden { display: none !important; }
+        
+        /* استایل صفحه بازی */
+        #game-board { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; background: #1e293b; padding: 10px; border-radius: 10px; margin-top: 20px; }
+        .cell { background: #334155; aspect-ratio: 1; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; user-select: none; border: 1px solid #475569; }
+        .cell:hover { background: #475569; }
+        .cell.p1 { background: #06C755; color: white; } /* مهره بازیکن ۱ */
+        .cell.p2 { background: #ef4444; color: white; } /* مهره بازیکن ۲ */
+        #turn-indicator { font-size: 18px; font-weight: bold; margin: 15px 0; color: #fbbf24; }
     </style>
 </head>
 <body>
 
     <h1>🎲 بازی منچ آنلاین</h1>
 
+    <!-- منوی اتصال -->
     <div class="card" id="main-menu">
-        <h2>🔗 اتصال به حریف</h2>
-        <p>آیدی اختصاصی شما:</p>
-        <div id="my-id" class="id-box">در حال ساخت...</div>
-
+        <h2>اتصال به حریف</h2>
+        <p>آیدی شما:</p>
+        <div id="my-id" class="id-box">...</div>
         <div id="connect-section">
-            <p>آیدی حریف را وارد کنید:</p>
-            <input type="text" id="opponent-id" placeholder="مثلا 1234" maxlength="4">
-            <button class="primary" onclick="sendRequest()">ارسال درخواست</button>
+            <input type="text" id="opponent-id" placeholder="آیدی حریف (مثلا 1234)" maxlength="4">
+            <button onclick="sendRequest()">ارسال درخواست</button>
         </div>
-
         <div id="accept-section" class="hidden">
-            <p style="color: #fbbf24; margin-bottom: 10px;">یک درخواست از طرف <span id="req-id" style="font-weight: bold; font-size: 18px;"></span> دریافت شد!</p>
-            <button class="primary" onclick="acceptRequest()">قبول درخواست</button>
-            <button class="primary danger" onclick="rejectRequest()">رد درخواست</button>
+            <p style="color: #fbbf24; margin-bottom: 10px;">درخواست از طرف <span id="req-id"></span>!</p>
+            <button onclick="acceptRequest()">قبول درخواست</button>
         </div>
-
-        <div id="status">در حال آماده‌سازی...</div>
+        <div id="status">در حال اتصال...</div>
     </div>
 
-    <div id="game-area" class="hidden">
-        <h2>بازی شروع شد!</h2>
-        <p>اینجا می‌توانید صفحه بازی (صفحه شطرنجی) را اضافه کنید.</p>
+    <!-- صفحه بازی -->
+    <div class="card hidden" id="game-area">
+        <div id="turn-indicator">نوبت شماست!</div>
+        <div id="game-board"></div>
     </div>
 
     <script>
         const socket = io("https://manch-server.onrender.com");
         let myId = null;
         let requesterId = null;
+        let isMyTurn = false;
+        let myPlayerNumber = 1; // 1 یا 2
+
+        // ساخت صفحه بازی ۵x۵ (۲۵ خانه)
+        const board = document.getElementById('game-board');
+        for (let i = 0; i < 25; i++) {
+            const cell = document.createElement('div');
+            cell.classList.add('cell');
+            cell.dataset.index = i;
+            cell.addEventListener('click', () => makeMove(i));
+            board.appendChild(cell);
+        }
 
         socket.on('connect', () => {
-            document.getElementById('status').innerText = "به سرور متصل شدید. در انتظار آیدی...";
+            document.getElementById('status').innerText = "به سرور متصل شدید.";
             document.getElementById('status').style.color = "#06C755";
         });
 
-        // دریافت آیدی کوتاه از سرور
         socket.on('your-id', (id) => {
             myId = id;
             document.getElementById('my-id').innerText = id;
-            document.getElementById('status').innerText = "آماده برای بازی. آیدی خود را به دوستتان بدهید.";
+            document.getElementById('status').innerText = "آماده. آیدی خود را به دوستتان بدهید.";
         });
 
         function sendRequest() {
-            const opponentId = document.getElementById('opponent-id').value.trim();
-            if (!opponentId) {
-                alert("لطفاً آیدی حریف را وارد کنید.");
-                return;
-            }
-            socket.emit('request-connect', opponentId);
-            document.getElementById('status').innerText = "در حال ارسال درخواست...";
+            const opId = document.getElementById('opponent-id').value.trim();
+            if (opId) socket.emit('request-connect', opId);
         }
 
-        // دریافت درخواست از حریف
         socket.on('incoming-request', (data) => {
             requesterId = data.from;
             document.getElementById('req-id').innerText = data.from;
             document.getElementById('connect-section').classList.add('hidden');
             document.getElementById('accept-section').classList.remove('hidden');
-            document.getElementById('status').innerText = "منتظر پاسخ شما...";
         });
 
         function acceptRequest() {
             socket.emit('accept-connect', requesterId);
         }
 
-        function rejectRequest() {
-            document.getElementById('accept-section').classList.add('hidden');
-            document.getElementById('connect-section').classList.remove('hidden');
-            document.getElementById('status').innerText = "درخواست رد شد.";
-            requesterId = null;
-        }
-
-        // شروع بازی برای هر دو نفر
+        // وقتی بازی شروع شد
         socket.on('game-started', (data) => {
             document.getElementById('main-menu').classList.add('hidden');
             document.getElementById('game-area').classList.remove('hidden');
+            
+            // بازیکنی که درخواست داده بود، شماره ۱ و بازیکنی که قبول کرد، شماره ۲ می‌شود
+            if (data.requester === myId) {
+                myPlayerNumber = 1;
+                isMyTurn = true;
+                document.getElementById('turn-indicator').innerText = "شما بازیکن ۱ (سبز) هستید. نوبت شماست!";
+            } else {
+                myPlayerNumber = 2;
+                isMyTurn = false;
+                document.getElementById('turn-indicator').innerText = "شما بازیکن ۲ (قرمز) هستید. منتظر حرکت حریف...";
+            }
         });
 
-        socket.on('error-msg', (msg) => {
-            alert(msg);
-            document.getElementById('status').innerText = msg;
+        // تابعی که وقتی روی یک خانه کلیک می‌کنیم اجرا می‌شود
+        function makeMove(index) {
+            if (!isMyTurn) return alert("الان نوبت شما نیست!");
+            
+            const cell = document.querySelector(`.cell[data-index="${index}"]`);
+            if (cell.classList.contains('p1') || cell.classList.contains('p2')) return alert("این خانه پر است!");
+
+            // آپدیت صفحه خودم
+            applyMove(index, myPlayerNumber);
+
+            // ارسال حرکت به سرور
+            socket.emit('make-move', { index: index, player: myPlayerNumber });
+
+            // تغییر نوبت
+            isMyTurn = false;
+            document.getElementById('turn-indicator').innerText = "منتظر حرکت حریف...";
+        }
+
+        // دریافت حرکت از حریف
+        socket.on('opponent-move', (data) => {
+            applyMove(data.index, data.player);
+            isMyTurn = true;
+            document.getElementById('turn-indicator').innerText = "نوبت شماست!";
         });
+
+        // اعمال رنگ مهره روی صفحه
+        function applyMove(index, playerNumber) {
+            const cell = document.querySelector(`.cell[data-index="${index}"]`);
+            if (playerNumber === 1) {
+                cell.classList.add('p1');
+                cell.innerText = '●';
+            } else {
+                cell.classList.add('p2');
+                cell.innerText = '●';
+            }
+        }
     </script>
 </body>
 </html>
