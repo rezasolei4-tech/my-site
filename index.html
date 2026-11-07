@@ -145,7 +145,7 @@
         }
 
         const socket = io("https://manch-server.onrender.com");
-        let myId = getPersistentId(); // استفاده از آیدی ثابت
+        let myId = getPersistentId(); 
         let isMyTurn = false;
         let myPlayerNumber = 1; 
         let currentDice = 0;
@@ -433,7 +433,7 @@
             }
         }
 
-        // WebRTC (بدون تغییر)
+        // WebRTC
         let localStream = null;
         let peerConnection = null;
         let isCamActive = false;
@@ -492,4 +492,86 @@
             } else {
                 if (localStream) localStream.getTracks().forEach(track => track.stop());
                 localStream = null;
-                micBtn.classList.remove('active
+                micBtn.classList.remove('active');
+                isMicActive = false;
+                if (peerConnection) { peerConnection.close(); peerConnection = null; }
+            }
+        }
+
+        function createPeerConnection() {
+            peerConnection = new RTCPeerConnection(configuration);
+            peerConnection.ontrack = (event) => {
+                document.getElementById('remote-video').srcObject = event.streams[0];
+            };
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    socket.emit('webrtc-signal', { type: 'candidate', candidate: event.candidate });
+                }
+            };
+        }
+
+        socket.on('webrtc-signal', async (data) => {
+            if (!peerConnection) createPeerConnection();
+            if (data.type === 'offer') {
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                const answer = await peerConnection.createAnswer();
+                await peerConnection.setLocalDescription(answer);
+                socket.emit('webrtc-signal', { type: 'answer', sdp: answer });
+                document.getElementById('video-container').classList.remove('hidden');
+            } 
+            else if (data.type === 'answer') {
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+            } 
+            else if (data.type === 'candidate') {
+                await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+            }
+        });
+
+        // ==========================================
+        // 🚨 قابلیت جابه‌جایی کادر ویدیو
+        // ==========================================
+        const dragElement = document.getElementById('video-container');
+        let isDragging = false;
+        let startX, startY, initialLeft, initialTop;
+
+        dragElement.addEventListener('pointerdown', (e) => {
+            isDragging = true;
+            dragElement.setPointerCapture(e.pointerId);
+            const rect = dragElement.getBoundingClientRect();
+            startX = e.clientX;
+            startY = e.clientY;
+            initialLeft = rect.left;
+            initialTop = rect.top;
+            dragElement.style.cursor = 'grabbing';
+        });
+
+        dragElement.addEventListener('pointermove', (e) => {
+            if (!isDragging) return;
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            let newLeft = initialLeft + dx;
+            let newTop = initialTop + dy;
+            const maxLeft = window.innerWidth - dragElement.offsetWidth;
+            const maxTop = window.innerHeight - dragElement.offsetHeight;
+            if (newLeft < 0) newLeft = 0;
+            if (newTop < 0) newTop = 0;
+            if (newLeft > maxLeft) newLeft = maxLeft;
+            if (newTop > maxTop) newTop = maxTop;
+            dragElement.style.left = newLeft + 'px';
+            dragElement.style.top = newTop + 'px';
+            dragElement.style.right = 'auto';
+        });
+
+        dragElement.addEventListener('pointerup', (e) => {
+            if (!isDragging) return;
+            isDragging = false;
+            dragElement.releasePointerCapture(e.pointerId);
+            dragElement.style.cursor = 'grab';
+        });
+
+        dragElement.addEventListener('pointercancel', (e) => {
+            isDragging = false;
+        });
+    </script>
+</body>
+</html>
