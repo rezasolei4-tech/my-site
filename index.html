@@ -19,7 +19,6 @@
         body { background: var(--bg-color); color: var(--text-color); display: flex; flex-direction: column; min-height: 100vh; overflow-x: hidden; transition: background 0.3s, color 0.3s; }
         .hidden { display: none !important; }
         
-        /* ... (استایل‌های هدر، لابی و تنظیمات مثل قبل) ... */
         .header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: var(--header-bg); box-shadow: 0 2px 10px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 50; border-bottom: 1px solid var(--border-color); }
         .header-title { font-size: 18px; font-weight: bold; color: var(--text-color); }
         .menu-btn { background: transparent; border: none; color: var(--text-muted); font-size: 28px; cursor: pointer; width: auto; padding: 0 10px; box-shadow: none; }
@@ -29,7 +28,7 @@
         .settings-value { font-size: 18px; font-weight: bold; color: #06C755; }
         .settings-name { font-size: 16px; font-weight: bold; color: var(--text-color); }
         .theme-toggle { cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 15px; color: var(--text-color); font-weight: bold; padding: 5px 0; }
-        
+
         .main-content { padding: 20px; display: flex; flex-direction: column; gap: 15px; max-width: 500px; margin: 0 auto; width: 100%; }
         .accordion { background: var(--card-bg); border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color); }
         .accordion-header { padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: var(--card-bg); }
@@ -89,12 +88,10 @@
         #remote-video, #local-video { width: 100%; height: 50%; object-fit: cover; background: #1e293b; pointer-events: none; }
         #local-video { transform: scaleX(-1); }
 
-        /* 🚨 دکمه چت بالای بازی */
         #chat-btn { display: flex; justify-content: center; align-items: center; background: linear-gradient(145deg, #05a648, #06C755); border: none; border-radius: 12px; color: white; font-size: 22px; font-weight: bold; width: 45px; height: 45px; box-shadow: 3px 3px 8px rgba(0,0,0,0.4), -2px -2px 5px rgba(255,255,255,0.2), inset 0 0 10px rgba(255,255,255,0.1); cursor: pointer; transition: 0.2s; position: absolute; right: 20px; top: 10px; z-index: 150; }
         #chat-btn:active { box-shadow: inset 2px 2px 5px rgba(0,0,0,0.5), inset -1px -1px 3px rgba(255,255,255,0.2); transform: scale(0.95); }
         #chat-btn.hidden { display: none; }
 
-        /* کادر چت (قابل جابه‌جایی) */
         #chat-modal { position: fixed; top: 100px; left: 50px; width: 300px; height: 400px; background: var(--card-bg); border-radius: 15px; border: 1px solid var(--border-color); box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column; z-index: 150; overflow: hidden; cursor: grab; touch-action: none; transition: opacity 0.2s; }
         #chat-modal:active { cursor: grabbing; opacity: 0.9; }
         .chat-header { padding: 12px; background: var(--header-bg); color: var(--text-color); font-weight: bold; display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); }
@@ -227,7 +224,7 @@
         }
 
         // ==========================================
-        // 🚨 چت و ارسال فایل (متن، عکس، فیلم)
+        // 🚨 چت و ارسال فایل
         // ==========================================
         function toggleChat() {
             const chatModal = document.getElementById('chat-modal');
@@ -238,7 +235,6 @@
             }
         }
         function handleChatEnter(e) { if (e.key === 'Enter') sendChatMessage(); }
-        
         function sendChatMessage() {
             const input = document.getElementById('chat-input');
             const text = input.value.trim();
@@ -248,127 +244,65 @@
             socket.emit('chat-message', msgData);
             input.value = '';
         }
-
-        // ارسال فایل
         function handleFileSelect(event) {
             const file = event.target.files[0];
             if (!file) return;
-            
             const reader = new FileReader();
             reader.onload = function(e) {
-                const fileData = e.target.result; // Base64
-                const msgData = { 
-                    type: file.type.startsWith('image') ? 'image' : 'video', 
-                    content: fileData, 
-                    sender: 'me' 
-                };
+                const fileData = e.target.result;
+                const msgData = { type: file.type.startsWith('image') ? 'image' : 'video', content: fileData, sender: 'me' };
                 saveAndDisplayMessage(msgData);
                 socket.emit('chat-message', msgData);
             };
             reader.readAsDataURL(file);
-            event.target.value = ''; // ریست کردن اینپوت
+            event.target.value = '';
         }
-
         socket.on('chat-message', (msgData) => {
             msgData.sender = 'other';
             saveAndDisplayMessage(msgData);
         });
-
         function saveAndDisplayMessage(msgData) {
-            // ذخیره در حافظه
             let history = JSON.parse(localStorage.getItem('manchChatHistory')) || [];
             history.push(msgData);
-            if (history.length > 30) history = history.slice(-30); // محدودیت حجم
+            if (history.length > 30) history = history.slice(-30);
             localStorage.setItem('manchChatHistory', JSON.stringify(history));
-            
-            // نمایش در صفحه
             displayMessageInDOM(msgData);
         }
-
         function displayMessageInDOM(msgData) {
             const messagesDiv = document.getElementById('chat-messages');
             const msgDiv = document.createElement('div');
             msgDiv.classList.add('msg', msgData.sender);
-            
-            if (msgData.type === 'text') {
-                msgDiv.innerText = msgData.content;
-            } else if (msgData.type === 'image') {
-                const img = document.createElement('img');
-                img.src = msgData.content;
-                msgDiv.appendChild(img);
-            } else if (msgData.type === 'video') {
-                const vid = document.createElement('video');
-                vid.src = msgData.content;
-                vid.controls = true;
-                msgDiv.appendChild(vid);
-            }
-            
+            if (msgData.type === 'text') { msgDiv.innerText = msgData.content; } 
+            else if (msgData.type === 'image') { const img = document.createElement('img'); img.src = msgData.content; msgDiv.appendChild(img); } 
+            else if (msgData.type === 'video') { const vid = document.createElement('video'); vid.src = msgData.content; vid.controls = true; msgDiv.appendChild(vid); }
             messagesDiv.appendChild(msgDiv);
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
         }
-
         function loadChatHistory() {
             const messagesDiv = document.getElementById('chat-messages');
             messagesDiv.innerHTML = '';
             let history = JSON.parse(localStorage.getItem('manchChatHistory')) || [];
             history.forEach(msg => displayMessageInDOM(msg));
         }
-
-        // جابه‌جایی کادر چت
         const chatModal = document.getElementById('chat-modal');
         let isDraggingChat = false, chatStartX, chatStartY, chatInitialLeft, chatInitialTop;
-        chatModal.addEventListener('pointerdown', (e) => {
-            if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.classList.contains('chat-close')) return;
-            isDraggingChat = true;
-            chatModal.setPointerCapture(e.pointerId);
-            const rect = chatModal.getBoundingClientRect();
-            chatStartX = e.clientX; chatStartY = e.clientY;
-            chatInitialLeft = rect.left; chatInitialTop = rect.top;
-            chatModal.style.cursor = 'grabbing';
-        });
-        chatModal.addEventListener('pointermove', (e) => {
-            if (!isDraggingChat) return;
-            const dx = e.clientX - chatStartX, dy = e.clientY - chatStartY;
-            let newLeft = chatInitialLeft + dx, newTop = chatInitialTop + dy;
-            const maxLeft = window.innerWidth - chatModal.offsetWidth, maxTop = window.innerHeight - chatModal.offsetHeight;
-            if (newLeft < 0) newLeft = 0; if (newTop < 0) newTop = 0;
-            if (newLeft > maxLeft) newLeft = maxLeft; if (newTop > maxTop) newTop = maxTop;
-            chatModal.style.left = newLeft + 'px'; chatModal.style.top = newTop + 'px'; chatModal.style.right = 'auto';
-        });
+        chatModal.addEventListener('pointerdown', (e) => { if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.classList.contains('chat-close')) return; isDraggingChat = true; chatModal.setPointerCapture(e.pointerId); const rect = chatModal.getBoundingClientRect(); chatStartX = e.clientX; chatStartY = e.clientY; chatInitialLeft = rect.left; chatInitialTop = rect.top; chatModal.style.cursor = 'grabbing'; });
+        chatModal.addEventListener('pointermove', (e) => { if (!isDraggingChat) return; const dx = e.clientX - chatStartX, dy = e.clientY - chatStartY; let newLeft = chatInitialLeft + dx, newTop = chatInitialTop + dy; const maxLeft = window.innerWidth - chatModal.offsetWidth, maxTop = window.innerHeight - chatModal.offsetHeight; if (newLeft < 0) newLeft = 0; if (newTop < 0) newTop = 0; if (newLeft > maxLeft) newLeft = maxLeft; if (newTop > maxTop) newTop = maxTop; chatModal.style.left = newLeft + 'px'; chatModal.style.top = newTop + 'px'; chatModal.style.right = 'auto'; });
         chatModal.addEventListener('pointerup', (e) => { if (isDraggingChat) { isDraggingChat = false; chatModal.releasePointerCapture(e.pointerId); chatModal.style.cursor = 'grab'; } });
 
         // ==========================================
-        // بقیه منطق بازی (بدون تغییر)
+        // بقیه منطق بازی
         // ==========================================
-        function toggleTheme() {
-            document.body.classList.toggle('light-mode');
-            const isLight = document.body.classList.contains('light-mode');
-            document.getElementById('theme-icon').innerText = isLight ? '☀️' : '🌙';
-            localStorage.setItem('theme', isLight ? 'light' : 'dark');
-        }
-        window.onload = () => {
-            const savedTheme = localStorage.getItem('theme');
-            if (savedTheme === 'light') { document.body.classList.add('light-mode'); document.getElementById('theme-icon').innerText = '☀️'; }
-        };
+        function toggleTheme() { document.body.classList.toggle('light-mode'); const isLight = document.body.classList.contains('light-mode'); document.getElementById('theme-icon').innerText = isLight ? '☀️' : '🌙'; localStorage.setItem('theme', isLight ? 'light' : 'dark'); }
+        window.onload = () => { const savedTheme = localStorage.getItem('theme'); if (savedTheme === 'light') { document.body.classList.add('light-mode'); document.getElementById('theme-icon').innerText = '☀️'; } };
         function toggleSettings() { document.getElementById('settings-menu').classList.toggle('hidden'); }
         function toggleAccordion() { document.getElementById('online-accordion').classList.toggle('open'); }
         function openOnlineList() { document.getElementById('online-accordion').classList.add('open'); document.getElementById('online-accordion').scrollIntoView({ behavior: 'smooth' }); }
-        document.addEventListener('click', function(event) {
-            const menu = document.getElementById('settings-menu');
-            const btn = document.querySelector('.menu-btn');
-            if (!menu.contains(event.target) && !btn.contains(event.target)) menu.classList.add('hidden');
-        });
-
-        function getPersistentId() {
-            let id = localStorage.getItem('manchPlayerId');
-            if (!id) { id = Math.floor(1000 + Math.random() * 9000).toString(); localStorage.setItem('manchPlayerId', id); }
-            return id;
-        }
+        document.addEventListener('click', function(event) { const menu = document.getElementById('settings-menu'); const btn = document.querySelector('.menu-btn'); if (!menu.contains(event.target) && !btn.contains(event.target)) menu.classList.add('hidden'); });
+        function getPersistentId() { let id = localStorage.getItem('manchPlayerId'); if (!id) { id = Math.floor(1000 + Math.random() * 9000).toString(); localStorage.setItem('manchPlayerId', id); } return id; }
 
         socket.on('connect', () => { socket.emit('register-user', myId); });
-        socket.on('your-id', (id) => { 
-            myId = id; document.getElementById('settings-id').innerText = id; document.getElementById('settings-username').innerText = "بازیکن " + id;
-        });
+        socket.on('your-id', (id) => { myId = id; document.getElementById('settings-id').innerText = id; document.getElementById('settings-username').innerText = "بازیکن " + id; });
 
         socket.on('online-users-list', (users) => {
             const list = document.getElementById('users-list'); list.innerHTML = ''; let hasOtherUsers = false;
