@@ -12,6 +12,7 @@ let onlineUsers = {};
 let userStatus = {};  
 let rooms = {};
 
+// تابعی برای ارسال لیست کاربران آنلاین به همه
 function broadcastOnlineUsers() {
   const usersList = Object.keys(onlineUsers).map(id => ({
     id: id,
@@ -21,22 +22,25 @@ function broadcastOnlineUsers() {
 }
 
 io.on('connection', (socket) => {
-  // 🚨 حالا ما منتظر می‌مونیم تا کاربر آیدی خودش رو (از حافظه گوشیش) بفرسته
+  
+  // 🚨 ثبت کاربر با آیدی ثابت
   socket.on('register-user', (shortId) => {
-    // اگر این آیدی قبلا آنلاین بوده (مثلا دو تا تب باز کرده)، قطعش می‌کنیم
+    // اگر این آیدی قبلا آنلاین بوده، اتصالش رو قطع می‌کنیم تا دوباره وصل بشه
     if (onlineUsers[shortId]) {
-        // اینجا می‌تونیم به کاربر قبلی پیام بدیم که یه جای دیگه لاگین شده
+        const oldSocketId = onlineUsers[shortId];
+        io.sockets.sockets.get(oldSocketId)?.disconnect();
     }
     
     onlineUsers[shortId] = socket.id;
     userStatus[shortId] = 'idle';
     socket.join(shortId);
-    socket.shortId = shortId; // ذخیره در سوکت برای استفاده در قطع اتصال
+    socket.shortId = shortId; 
     
     socket.emit('your-id', shortId);
     broadcastOnlineUsers();
   });
 
+  // درخواست اتصال
   socket.on('request-connect', (opponentId) => {
     if (onlineUsers[opponentId] && userStatus[opponentId] === 'idle') {
       io.to(onlineUsers[opponentId]).emit('incoming-request', { from: socket.shortId });
@@ -45,6 +49,7 @@ io.on('connection', (socket) => {
     }
   });
 
+  // قبول درخواست
   socket.on('accept-connect', (requesterId) => {
     if (onlineUsers[requesterId]) {
       const roomId = `${requesterId}-${socket.shortId}`;
@@ -66,12 +71,14 @@ io.on('connection', (socket) => {
     }
   });
 
+  // رد درخواست
   socket.on('reject-connect', (requesterId) => {
     if (onlineUsers[requesterId]) {
       io.to(onlineUsers[requesterId]).emit('request-rejected');
     }
   });
 
+  // تاس
   socket.on('dice-rolled', (data) => {
     for (const roomId in rooms) {
       if (roomId.includes(socket.shortId)) {
@@ -81,6 +88,7 @@ io.on('connection', (socket) => {
     }
   });
 
+  // حرکت مهره
   socket.on('make-move', (data) => {
     for (const roomId in rooms) {
       if (roomId.includes(socket.shortId)) {
@@ -90,6 +98,7 @@ io.on('connection', (socket) => {
     }
   });
 
+  // پایان نوبت
   socket.on('end-turn', (data) => {
     for (const roomId in rooms) {
       if (roomId.includes(socket.shortId)) {
@@ -109,6 +118,7 @@ io.on('connection', (socket) => {
     }
   });
 
+  // WebRTC (تماس تصویری)
   socket.on('webrtc-signal', (data) => {
     for (const roomId in rooms) {
       if (roomId.includes(socket.shortId)) {
@@ -118,6 +128,17 @@ io.on('connection', (socket) => {
     }
   });
 
+  // چت متنی
+  socket.on('chat-message', (text) => {
+    for (const roomId in rooms) {
+      if (roomId.includes(socket.shortId)) {
+        socket.to(roomId).emit('chat-message', text);
+        break;
+      }
+    }
+  });
+
+  // قطع اتصال
   socket.on('disconnect', () => {
     const shortId = socket.shortId;
     if (shortId) {
