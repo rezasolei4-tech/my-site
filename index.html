@@ -519,4 +519,214 @@
 
         socket.on('opponent-dice', (data) => {
             updateDiceDisplay(data.dice);
-            document.getElementById('game-msg').inner
+            document.getElementById('game-msg').innerText = `حریف ${data.dice} آورد.`;
+        });
+
+        function selectPiece(pieceIndex) {
+            if (!isMyTurn || !hasRolled) return;
+            const currentPos = pieces[myPlayerNumber][pieceIndex];
+            if (currentPos === -1 && currentDice !== 6) return; 
+            if (currentPos !== -1 && currentPos !== totalPathLength && currentPos + currentDice > totalPathLength) return; 
+            let newPos = (currentPos === -1) ? 0 : currentPos + currentDice;
+            if (newPos > totalPathLength) newPos = totalPathLength;
+            pieces[myPlayerNumber][pieceIndex] = newPos;
+            let opponentPlayerNum = (myPlayerNumber === 1) ? 2 : 1;
+            let killedPieceIndex = -1;
+            if (newPos < totalPathLength && newPos >= 0) {
+                pieces[opponentPlayerNum].forEach((oppPos, oppIndex) => {
+                    if (oppPos === newPos) {
+                        pieces[opponentPlayerNum][oppIndex] = -1;
+                        killedPieceIndex = oppIndex;
+                    }
+                });
+            }
+            socket.emit('make-move', { 
+                player: myPlayerNumber, pieceIndex: pieceIndex, newPos: newPos,
+                killed: { player: opponentPlayerNum, pieceIndex: killedPieceIndex, newPos: -1 }
+            });
+            let winCount = pieces[myPlayerNumber].filter(p => p === totalPathLength).length;
+            if (winCount === 3) { socket.emit('end-turn', { winner: myPlayerNumber }); return; }
+            if (currentDice === 6) socket.emit('end-turn', { dice: 6 }); 
+            else socket.emit('end-turn', { dice: 1 }); 
+        }
+
+        socket.on('opponent-move', (data) => {
+            pieces[data.player][data.pieceIndex] = data.newPos;
+            if (data.killed && data.killed.pieceIndex !== -1) {
+                pieces[data.killed.player][data.killed.pieceIndex] = -1;
+            }
+            updateUI();
+        });
+
+        function updateUI() {
+            document.querySelectorAll('.piece').forEach(p => p.remove());
+            for (let p = 1; p <= 2; p++) {
+                const currentPath = (p === 1) ? pathP1 : pathP2;
+                pieces[p].forEach((pos, index) => {
+                    if (pos !== -1) {
+                        let cellIndex = (pos >= currentPath.length) ? currentPath[currentPath.length - 1] : currentPath[pos];
+                        const cell = document.querySelector(`.cell[data-index="${cellIndex}"]`);
+                        if (cell) {
+                            const pieceDiv = document.createElement('div');
+                            pieceDiv.classList.add('piece', `p${p}`);
+                            if (pos >= totalPathLength) pieceDiv.classList.add('finished');
+                            if (p === myPlayerNumber && isMyTurn && hasRolled) {
+                                if ((pos === -1 && currentDice === 6) || (pos !== totalPathLength && pos + currentDice <= totalPathLength)) pieceDiv.classList.add('highlight');
+                            }
+                            if (p === myPlayerNumber) pieceDiv.onclick = () => selectPiece(index);
+                            cell.appendChild(pieceDiv);
+                        }
+                    }
+                });
+            }
+            updateHomePieces();
+        }
+
+        function updateHomePieces() {
+            for (let p = 1; p <= 2; p++) {
+                const container = document.getElementById(`home-pieces-p${p}`);
+                container.innerHTML = '';
+                pieces[p].forEach((pos, index) => {
+                    if (pos === -1) {
+                        const hp = document.createElement('div');
+                        hp.classList.add('home-piece', `p${p}`);
+                        if (p === myPlayerNumber && isMyTurn && hasRolled && currentDice === 6) {
+                            hp.classList.add('highlight');
+                            hp.onclick = () => selectPiece(index);
+                        }
+                        container.appendChild(hp);
+                    }
+                });
+            }
+        }
+
+        // WebRTC
+        let localStream = null;
+        let peerConnection = null;
+        let isCamActive = false;
+        let isMicActive = false;
+        const configuration = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+
+        async function toggleCam() {
+            const camBtn = document.getElementById('cam-btn');
+            const videoContainer = document.getElementById('video-container');
+            const localVideo = document.getElementById('local-video');
+            if (!isCamActive) {
+                try {
+                    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                    localVideo.srcObject = localStream;
+                    videoContainer.classList.remove('hidden');
+                    camBtn.classList.add('active');
+                    isCamActive = true;
+                    isMicActive = true; 
+                    document.getElementById('mic-btn').classList.add('active');
+                    if (!peerConnection) createPeerConnection();
+                    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+                    const offer = await peerConnection.createOffer();
+                    await peerConnection.setLocalDescription(offer);
+                    socket.emit('webrtc-signal', { type: 'offer', sdp: offer });
+                } catch (err) { alert("دسترسی به دوربین امکان‌پذیر نیست."); }
+            } else {
+                if (localStream) localStream.getTracks().forEach(track => track.stop());
+                localStream = null;
+                localVideo.srcObject = null;
+                videoContainer.classList.add('hidden');
+                camBtn.classList.remove('active');
+                isCamActive = false;
+                isMicActive = false;
+                document.getElementById('mic-btn').classList.remove('active');
+                if (peerConnection) { peerConnection.close(); peerConnection = null; }
+            }
+        }
+
+        async function toggleMic() {
+            const micBtn = document.getElementById('mic-btn');
+            if (!isMicActive) {
+                try {
+                    localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    micBtn.classList.add('active');
+                    isMicActive = true;
+                    if (!peerConnection) createPeerConnection();
+                    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+                    const offer = await peerConnection.createOffer();
+                    await peerConnection.setLocalDescription(offer);
+                    socket.emit('webrtc-signal', { type: 'offer', sdp: offer });
+                } catch (err) { alert("دسترسی به میکروفون امکان‌پذیر نیست."); }
+            } else {
+                if (localStream) localStream.getTracks().forEach(track => track.stop());
+                localStream = null;
+                micBtn.classList.remove('active');
+                isMicActive = false;
+                if (peerConnection) { peerConnection.close(); peerConnection = null; }
+            }
+        }
+
+        function createPeerConnection() {
+            peerConnection = new RTCPeerConnection(configuration);
+            peerConnection.ontrack = (event) => {
+                document.getElementById('remote-video').srcObject = event.streams[0];
+            };
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    socket.emit('webrtc-signal', { type: 'candidate', candidate: event.candidate });
+                }
+            };
+        }
+
+        socket.on('webrtc-signal', async (data) => {
+            if (!peerConnection) createPeerConnection();
+            if (data.type === 'offer') {
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                const answer = await peerConnection.createAnswer();
+                await peerConnection.setLocalDescription(answer);
+                socket.emit('webrtc-signal', { type: 'answer', sdp: answer });
+                document.getElementById('video-container').classList.remove('hidden');
+            } 
+            else if (data.type === 'answer') {
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+            } 
+            else if (data.type === 'candidate') {
+                await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+            }
+        });
+
+        // جابه‌جایی کادر ویدیو
+        const dragElement = document.getElementById('video-container');
+        let isDragging = false;
+        let startX, startY, initialLeft, initialTop;
+        dragElement.addEventListener('pointerdown', (e) => {
+            isDragging = true;
+            dragElement.setPointerCapture(e.pointerId);
+            const rect = dragElement.getBoundingClientRect();
+            startX = e.clientX;
+            startY = e.clientY;
+            initialLeft = rect.left;
+            initialTop = rect.top;
+            dragElement.style.cursor = 'grabbing';
+        });
+        dragElement.addEventListener('pointermove', (e) => {
+            if (!isDragging) return;
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            let newLeft = initialLeft + dx;
+            let newTop = initialTop + dy;
+            const maxLeft = window.innerWidth - dragElement.offsetWidth;
+            const maxTop = window.innerHeight - dragElement.offsetHeight;
+            if (newLeft < 0) newLeft = 0;
+            if (newTop < 0) newTop = 0;
+            if (newLeft > maxLeft) newLeft = maxLeft;
+            if (newTop > maxTop) newTop = maxTop;
+            dragElement.style.left = newLeft + 'px';
+            dragElement.style.top = newTop + 'px';
+            dragElement.style.right = 'auto';
+        });
+        dragElement.addEventListener('pointerup', (e) => {
+            if (!isDragging) return;
+            isDragging = false;
+            dragElement.releasePointerCapture(e.pointerId);
+            dragElement.style.cursor = 'grab';
+        });
+        dragElement.addEventListener('pointercancel', (e) => { isDragging = false; });
+    </script>
+</body>
+</html>
