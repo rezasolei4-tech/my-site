@@ -19,12 +19,12 @@
         body { background: var(--bg-color); color: var(--text-color); display: flex; flex-direction: column; min-height: 100vh; overflow-x: hidden; transition: background 0.3s, color 0.3s; }
         .hidden { display: none !important; }
         
-        /* هدر */
+        /* 🚨 هدر اصلی (برگشت) */
         .header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: var(--header-bg); box-shadow: 0 2px 10px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 50; border-bottom: 1px solid var(--border-color); }
         .header-title { font-size: 18px; font-weight: bold; color: var(--text-color); }
         .menu-btn { background: transparent; border: none; color: var(--text-muted); font-size: 28px; cursor: pointer; width: auto; padding: 0 10px; box-shadow: none; }
         
-        /* منوی تنظیمات */
+        /* منوی تنظیمات (آیدی و تم) */
         #settings-menu { position: absolute; top: 60px; left: 20px; background: var(--card-bg); border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 250px; z-index: 100; border: 1px solid var(--border-color); overflow: hidden; }
         .settings-item { padding: 15px; border-bottom: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 5px; }
         .settings-label { font-size: 12px; color: var(--text-muted); }
@@ -96,7 +96,7 @@
         #remote-video, #local-video { width: 100%; height: 50%; object-fit: cover; background: #1e293b; pointer-events: none; }
         #local-video { transform: scaleX(-1); }
 
-        /* 🚨 دکمه چت بالا (سه بعدی و سبز) */
+        /* 🚨 دکمه چت (سبز و سه بعدی) */
         #chat-btn {
             display: flex; justify-content: center; align-items: center;
             background: linear-gradient(145deg, #05a648, #06C755);
@@ -106,12 +106,12 @@
             box-shadow: 3px 3px 8px rgba(0,0,0,0.4), -2px -2px 5px rgba(255,255,255,0.2), inset 0 0 10px rgba(255,255,255,0.1);
             cursor: pointer; transition: 0.2s;
             position: absolute; right: 20px; top: 10px;
+            z-index: 150;
         }
         #chat-btn:active {
             box-shadow: inset 2px 2px 5px rgba(0,0,0,0.5), inset -1px -1px 3px rgba(255,255,255,0.2);
             transform: scale(0.95);
         }
-        #chat-btn.hidden { display: none; }
 
         /* کادر چت (قابل جابه‌جایی) */
         #chat-modal {
@@ -138,19 +138,20 @@
 </head>
 <body>
 
-    <!-- 🚨 هدر اصلی با دکمه چت بالای بازی -->
+    <!-- هدر اصلی (با آیدی ثابت در منو) -->
     <div class="header" id="lobby-header">
         <div class="header-title">منچ آنلاین</div>
         <button class="menu-btn" onclick="toggleSettings()">⋮</button>
     </div>
 
-    <!-- منوی تنظیمات -->
+    <!-- منوی تنظیمات (آیدی و تم) -->
     <div id="settings-menu" class="hidden">
         <div class="settings-item"><span class="settings-label">نام کاربری</span><span class="settings-name" id="settings-username">بازیکن مهمان</span></div>
         <div class="settings-item"><span class="settings-label">آیدی ثابت شما</span><span class="settings-value" id="settings-id">...</span></div>
         <div class="settings-item"><div class="theme-toggle" onclick="toggleTheme()"><span>تم روشن / تاریک</span><span class="theme-icon" id="theme-icon">🌙</span></div></div>
     </div>
 
+    <!-- لابی اصلی -->
     <div class="main-content" id="lobby-screen">
         <div class="accordion" id="online-accordion">
             <div class="accordion-header" onclick="toggleAccordion()"><div class="accordion-title">لیست کاربران آنلاین</div><div class="accordion-icon">▼</div></div>
@@ -163,6 +164,7 @@
         </div>
     </div>
 
+    <!-- درخواست بازی -->
     <div id="request-modal" class="hidden">
         <div class="modal-content">
             <h3 style="margin-bottom: 15px; color: #fbbf24; font-size: 22px;">📩 درخواست بازی!</h3>
@@ -174,6 +176,7 @@
         </div>
     </div>
 
+    <!-- صفحه بازی -->
     <div id="game-area" class="hidden" style="display: flex; flex-direction: column; align-items: center; width: 100%; padding: 10px;">
         <!-- 🚨 دکمه چت بالای بازی -->
         <button id="chat-btn" class="hidden" onclick="toggleChat()">💬</button>
@@ -203,7 +206,7 @@
         <div id="cam-btn" class="control-btn" onclick="toggleCam()">📷</div>
     </div>
 
-    <!-- 🚨 کادر چت -->
+    <!-- کادر چت -->
     <div id="chat-modal" class="hidden">
         <div class="chat-header">
             <span>چت با حریف</span>
@@ -305,7 +308,7 @@
         chatModal.addEventListener('pointercancel', (e) => { isDraggingChat = false; });
 
         // ==========================================
-        // بقیه منطق بازی (بدون تغییر)
+        // بقیه منطق بازی
         // ==========================================
         function toggleTheme() {
             document.body.classList.toggle('light-mode');
@@ -438,8 +441,6 @@
             document.getElementById('lobby-screen').classList.add('hidden');
             document.getElementById('game-area').classList.remove('hidden');
             document.getElementById('controls').classList.remove('hidden');
-            
-            // نمایش دکمه چت بالای بازی
             document.getElementById('chat-btn').classList.remove('hidden');
 
             if (data.requester === myId) { myPlayerNumber = 1; } else { myPlayerNumber = 2; }
