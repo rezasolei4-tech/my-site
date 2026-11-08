@@ -2,57 +2,539 @@
 <html lang="fa" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تست نهایی</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>بازی منچ آنلاین</title>
     <script src="https://manch-server.onrender.com/socket.io/socket.io.js"></script>
     <style>
-        body { font-family: Tahoma; background: #0f172a; color: white; padding: 20px; text-align: center; }
-        .box { background: #1e293b; padding: 20px; border-radius: 10px; margin-top: 20px; }
+        :root {
+            --bg-color: #0f172a; --header-bg: #1e293b; --card-bg: #1e293b;
+            --text-color: #e2e8f0; --text-muted: #94a3b8; --border-color: #334155;
+            --btn-bg: #06C755; --btn-hover: #05a648;
+        }
+        body.light-mode {
+            --bg-color: #f1f5f9; --header-bg: #ffffff; --card-bg: #ffffff;
+            --text-color: #1e293b; --text-muted: #64748b; --border-color: #e2e8f0;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: Tahoma, sans-serif; }
+        body { background: var(--bg-color); color: var(--text-color); display: flex; flex-direction: column; min-height: 100vh; overflow-x: hidden; transition: background 0.3s, color 0.3s; }
+        .hidden { display: none !important; }
+        
+        /* ... (استایل‌های هدر، لابی و تنظیمات مثل قبل) ... */
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: var(--header-bg); box-shadow: 0 2px 10px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 50; border-bottom: 1px solid var(--border-color); }
+        .header-title { font-size: 18px; font-weight: bold; color: var(--text-color); }
+        .menu-btn { background: transparent; border: none; color: var(--text-muted); font-size: 28px; cursor: pointer; width: auto; padding: 0 10px; box-shadow: none; }
+        #settings-menu { position: absolute; top: 60px; left: 20px; background: var(--card-bg); border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 250px; z-index: 100; border: 1px solid var(--border-color); overflow: hidden; }
+        .settings-item { padding: 15px; border-bottom: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 5px; }
+        .settings-label { font-size: 12px; color: var(--text-muted); }
+        .settings-value { font-size: 18px; font-weight: bold; color: #06C755; }
+        .settings-name { font-size: 16px; font-weight: bold; color: var(--text-color); }
+        .theme-toggle { cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 15px; color: var(--text-color); font-weight: bold; padding: 5px 0; }
+        
+        .main-content { padding: 20px; display: flex; flex-direction: column; gap: 15px; max-width: 500px; margin: 0 auto; width: 100%; }
+        .accordion { background: var(--card-bg); border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color); }
+        .accordion-header { padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: var(--card-bg); }
+        .accordion-title { font-size: 16px; font-weight: bold; color: var(--text-color); display: flex; align-items: center; gap: 10px; }
+        .accordion-title::before { content: '🟢'; font-size: 12px; }
+        .accordion-icon { transition: transform 0.3s; color: var(--text-muted); }
+        .accordion.open .accordion-icon { transform: rotate(180deg); }
+        .accordion-content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; background: var(--bg-color); }
+        .accordion.open .accordion-content { max-height: 300px; overflow-y: auto; }
+        #users-list { list-style: none; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+        #users-list li { display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; background: var(--card-bg); border-radius: 8px; border: 1px solid var(--border-color); }
+        .user-info { display: flex; align-items: center; gap: 10px; }
+        .user-name { font-size: 15px; color: var(--text-color); }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #06C755; }
+        .status-dot.playing { background: #ef4444; }
+        .btn-request { background: var(--btn-bg); color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; width: auto; }
+        .btn-request:disabled { background: #475569; cursor: not-allowed; }
+        .action-card { background: var(--card-bg); border-radius: 15px; padding: 25px 20px; text-align: center; border: 1px solid var(--border-color); margin-top: auto; }
+        .action-title { font-size: 20px; font-weight: bold; color: #fbbf24; margin-bottom: 10px; }
+        .action-desc { font-size: 14px; color: var(--text-muted); margin-bottom: 20px; line-height: 1.6; }
+        .btn-main-action { background: var(--btn-bg); color: white; border: none; padding: 15px; border-radius: 12px; font-size: 18px; font-weight: bold; cursor: pointer; width: 100%; transition: 0.2s; display: flex; justify-content: center; align-items: center; gap: 10px; }
+
+        #request-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-content { background: var(--card-bg); padding: 25px; border-radius: 20px; text-align: center; width: 85%; max-width: 320px; border: 1px solid var(--border-color); }
+        .modal-content button { margin-top: 15px; margin-right: 5px; width: 45%; display: inline-block; padding: 12px; border-radius: 10px; font-weight: bold; border: none; cursor: pointer; }
+        .btn-reject { background: #ef4444; color: white; }
+        .btn-accept { background: var(--btn-bg); color: white; }
+        .board-wrapper { background: linear-gradient(135deg, #2a2a72 0%, #1a1a4e 100%); padding: 10px; border-radius: 20px; border: 4px solid #3b3b8c; width: 95vw; max-width: 450px; aspect-ratio: 1 / 1; margin: 0 auto 15px auto; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        #game-board { display: grid; grid-template-columns: repeat(9, 1fr); grid-template-rows: repeat(9, 1fr); gap: 3px; width: 100%; height: 100%; }
+        .empty-space { background: transparent; }
+        .cell { background: radial-gradient(circle at 30% 30%, #ffffff, #d1d5db); border-radius: 50%; border: 2px solid #6b7280; display: flex; align-items: center; justify-content: center; position: relative; color: #374151; font-size: 12px; font-weight: bold; }
+        .cell.red-start { background: radial-gradient(circle at 30% 30%, #ff6b6b, #dc2626); color: white; border-color: #991b1b; }
+        .cell.blue-start { background: radial-gradient(circle at 30% 30%, #60a5fa, #2563eb); color: white; border-color: #1e3a8a; }
+        .cell.red-home { background: radial-gradient(circle at 30% 30%, #fca5a5, #f87171); border-color: #ef4444; }
+        .cell.blue-home { background: radial-gradient(circle at 30% 30%, #93c5fd, #60a5fa); border-color: #3b82f6; }
+        .piece { width: 90%; height: 90%; display: flex; align-items: center; justify-content: center; font-size: 24px; position: absolute; z-index: 10; cursor: pointer; }
+        .piece.p1::after { content: '🐱'; }
+        .piece.p2::after { content: '🐶'; }
+        .piece.highlight { border: 2px solid #fbbf24; border-radius: 50%; box-shadow: 0 0 20px #fbbf24; transform: scale(1.2); animation: bounce 0.6s infinite alternate; }
+        @keyframes bounce { from { transform: scale(1.1); } to { transform: scale(1.3); } }
+        .dice-container { display: flex; flex-direction: column; align-items: center; gap: 15px; width: 100%; max-width: 400px; margin: 0 auto; }
+        .dice { width: 70px; height: 70px; background: linear-gradient(135deg, #ffffff, #e5e7eb); border-radius: 15px; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); padding: 10px; gap: 5px; }
+        .dot { background: #1f2937; border-radius: 50%; width: 100%; height: 100%; display: none; }
+        .dot.visible { display: block; }
+        .home-pieces { display: flex; justify-content: center; gap: 15px; margin-bottom: 10px; }
+        .home-piece { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 26px; border-radius: 50%; border: 2px solid var(--border-color); background: var(--card-bg); }
+        .home-piece.p1::after { content: '🐱'; }
+        .home-piece.p2::after { content: '🐶'; }
+        .home-piece.highlight { border: 2px solid #fbbf24; box-shadow: 0 0 15px #fbbf24; transform: scale(1.15); cursor: pointer; }
+        #turn-text { font-size: 16px; font-weight: bold; color: #fbbf24; margin-bottom: 10px; text-align: center; }
+        #game-msg { color: var(--text-muted); font-size: 14px; margin-bottom: 10px; text-align: center; min-height: 20px; }
+
+        #controls { position: fixed; bottom: 20px; left: 20px; display: flex; gap: 10px; z-index: 100; }
+        .control-btn { width: 55px; height: 55px; border-radius: 50%; font-size: 26px; background: var(--card-bg); border: 2px solid var(--border-color); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .control-btn.active { background: #ef4444; border-color: #fca5a5; animation: pulse 1.5s infinite; }
+        #video-container { position: fixed; top: 10px; right: 10px; width: 120px; height: 160px; background: #000; border-radius: 15px; overflow: hidden; display: flex; flex-direction: column; border: 2px solid #06C755; z-index: 200; cursor: grab; }
+        #remote-video, #local-video { width: 100%; height: 50%; object-fit: cover; background: #1e293b; pointer-events: none; }
+        #local-video { transform: scaleX(-1); }
+
+        /* 🚨 دکمه چت بالای بازی */
+        #chat-btn { display: flex; justify-content: center; align-items: center; background: linear-gradient(145deg, #05a648, #06C755); border: none; border-radius: 12px; color: white; font-size: 22px; font-weight: bold; width: 45px; height: 45px; box-shadow: 3px 3px 8px rgba(0,0,0,0.4), -2px -2px 5px rgba(255,255,255,0.2), inset 0 0 10px rgba(255,255,255,0.1); cursor: pointer; transition: 0.2s; position: absolute; right: 20px; top: 10px; z-index: 150; }
+        #chat-btn:active { box-shadow: inset 2px 2px 5px rgba(0,0,0,0.5), inset -1px -1px 3px rgba(255,255,255,0.2); transform: scale(0.95); }
+        #chat-btn.hidden { display: none; }
+
+        /* کادر چت (قابل جابه‌جایی) */
+        #chat-modal { position: fixed; top: 100px; left: 50px; width: 300px; height: 400px; background: var(--card-bg); border-radius: 15px; border: 1px solid var(--border-color); box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column; z-index: 150; overflow: hidden; cursor: grab; touch-action: none; transition: opacity 0.2s; }
+        #chat-modal:active { cursor: grabbing; opacity: 0.9; }
+        .chat-header { padding: 12px; background: var(--header-bg); color: var(--text-color); font-weight: bold; display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); }
+        .chat-close { cursor: pointer; color: #ef4444; font-size: 18px; }
+        #chat-messages { flex: 1; padding: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; background: var(--bg-color); }
+        .msg { padding: 8px 12px; border-radius: 10px; max-width: 80%; font-size: 14px; word-break: break-word; }
+        .msg.me { background: #06C755; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
+        .msg.other { background: var(--border-color); color: var(--text-color); align-self: flex-start; border-bottom-left-radius: 2px; }
+        .msg img, .msg video { max-width: 100%; border-radius: 8px; margin-top: 5px; }
+        .chat-input-area { display: flex; padding: 10px; background: var(--card-bg); border-top: 1px solid var(--border-color); gap: 8px; align-items: center; }
+        #chat-input { flex: 1; padding: 10px; border-radius: 20px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-color); outline: none; }
+        #chat-send { background: var(--btn-bg); border: none; width: 40px; height: 40px; border-radius: 50%; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+        #chat-file-btn { background: #64748b; border: none; width: 40px; height: 40px; border-radius: 50%; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+        #file-input { display: none; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
     </style>
 </head>
 <body>
-    <h2>آیدی شما:</h2>
-    <div id="my-id" style="font-size: 28px; color: #06C755; font-weight: bold;">---</div>
 
-    <div class="box">
-        <h3>کاربران آنلاین:</h3>
-        <ul id="users-list" style="list-style: none; padding: 0;">
-            <li>در حال دریافت...</li>
-        </ul>
+    <div class="header" id="lobby-header">
+        <div class="header-title">منچ آنلاین</div>
+        <button class="menu-btn" onclick="toggleSettings()">⋮</button>
+    </div>
+
+    <div id="settings-menu" class="hidden">
+        <div class="settings-item"><span class="settings-label">نام کاربری</span><span class="settings-name" id="settings-username">بازیکن مهمان</span></div>
+        <div class="settings-item"><span class="settings-label">آیدی ثابت شما</span><span class="settings-value" id="settings-id">...</span></div>
+        <div class="settings-item"><div class="theme-toggle" onclick="toggleTheme()"><span>تم روشن / تاریک</span><span class="theme-icon" id="theme-icon">🌙</span></div></div>
+    </div>
+
+    <div class="main-content" id="lobby-screen">
+        <div class="accordion" id="online-accordion">
+            <div class="accordion-header" onclick="toggleAccordion()"><div class="accordion-title">لیست کاربران آنلاین</div><div class="accordion-icon">▼</div></div>
+            <div class="accordion-content"><ul id="users-list"><li style="justify-content: center; color: var(--text-muted);">در حال دریافت لیست...</li></ul></div>
+        </div>
+        <div class="action-card">
+            <div class="action-title">🎮 بازی و تماس تصویری دونفره</div>
+            <div class="action-desc">برای شروع، یک نفر از لیست آنلاین‌ها را انتخاب کنید و درخواست بازی بفرستید. بعد از قبول شدن، می‌توانید تماس تصویری و صوتی برقرار کنید.</div>
+            <button class="btn-main-action" onclick="openOnlineList()"><span>👥</span> مشاهده لیست آنلاین‌ها و شروع بازی</button>
+        </div>
+    </div>
+
+    <div id="request-modal" class="hidden">
+        <div class="modal-content">
+            <h3 style="margin-bottom: 15px; color: #fbbf24; font-size: 22px;">📩 درخواست بازی!</h3>
+            <p style="color: var(--text-color);">کاربر <br><span id="req-id" style="color: #06C755; font-weight: bold; font-size: 28px; display: block; margin: 10px 0;"></span> می‌خواد با شما بازی کنه.</p>
+            <div style="display: flex; justify-content: space-between; margin-top: 20px;">
+                <button class="btn-reject" onclick="rejectRequest()" style="width: 45%;">رد</button>
+                <button class="btn-accept" onclick="acceptRequest()" style="width: 45%;">قبول</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="game-area" class="hidden" style="display: flex; flex-direction: column; align-items: center; width: 100%; padding: 10px;">
+        <button id="chat-btn" class="hidden" onclick="toggleChat()">💬</button>
+        <div id="turn-text">نوبت شماست!</div>
+        <div class="home-pieces" id="home-pieces-p1"></div>
+        <div class="home-pieces" id="home-pieces-p2"></div>
+        <div class="board-wrapper"><div id="game-board"></div></div>
+        <div class="dice-container">
+            <div class="dice" id="dice-display">
+                <div class="dot" id="d1"></div><div class="dot" id="d2"></div><div class="dot" id="d3"></div>
+                <div class="dot" id="d4"></div><div class="dot" id="d5"></div><div class="dot" id="d6"></div>
+                <div class="dot" id="d7"></div><div class="dot" id="d8"></div><div class="dot" id="d9"></div>
+            </div>
+            <button onclick="rollDice()" id="roll-btn" style="width: auto; padding: 12px 30px; border-radius: 10px; background: var(--btn-bg); color: white; border: none; font-weight: bold; cursor: pointer;">انداختن تاس</button>
+            <div id="game-msg">آماده شروع</div>
+        </div>
+    </div>
+
+    <div id="video-container" class="hidden">
+        <video id="remote-video" autoplay playsinline></video>
+        <video id="local-video" autoplay playsinline muted></video>
+    </div>
+    <div id="controls" class="hidden">
+        <div id="mic-btn" class="control-btn" onclick="toggleMic()">🎤</div>
+        <div id="cam-btn" class="control-btn" onclick="toggleCam()">📷</div>
+    </div>
+
+    <div id="chat-modal" class="hidden">
+        <div class="chat-header">
+            <span>چت با حریف</span>
+            <span class="chat-close" onclick="toggleChat()">✖</span>
+        </div>
+        <div id="chat-messages"></div>
+        <div class="chat-input-area">
+            <button id="chat-file-btn" onclick="document.getElementById('file-input').click()">📎</button>
+            <input type="file" id="file-input" accept="image/*,video/*" onchange="handleFileSelect(event)">
+            <input type="text" id="chat-input" placeholder="پیام..." onkeypress="handleChatEnter(event)">
+            <button id="chat-send" onclick="sendChatMessage()">➤</button>
+        </div>
     </div>
 
     <script>
+        // ==========================================
+        // 🚨 متغیرهای اصلی
+        // ==========================================
+        const socket = io("https://manch-server.onrender.com");
+        let myId = getPersistentId(); 
+        let isMyTurn = false;
+        let myPlayerNumber = 1; 
+        let currentDice = 0;
+        let hasRolled = false; 
+        let opponentId = null;
+
+        let pieces = { 1: [-1, -1, -1], 2: [-1, -1, -1] };
+        const deletedCells = [37, 38, 39, 40, 41, 42, 43];
+        const pathP1 = [4, 3, 12, 21, 30, 29, 28, 27, 36, 45, 46, 47, 48, 57, 66, 75, 76, 77, 68, 59, 50, 51, 52, 53, 44, 35, 34, 33, 32, 23, 14, 5, 13, 22, 31];
+        const pathP2 = [77, 68, 59, 50, 51, 52, 53, 44, 35, 34, 33, 32, 23, 14, 5, 4, 3, 12, 21, 30, 29, 28, 27, 36, 45, 46, 47, 48, 57, 66, 75, 67, 58, 49];
+        const startPointP1 = 4, startPointP2 = 76;
+        const totalPathLength = pathP1.length - 1; 
+
+        const board = document.getElementById('game-board');
+        for (let i = 0; i < 81; i++) {
+            const cell = document.createElement('div');
+            const row = Math.floor(i / 9), col = i % 9;
+            const isVertical = (col >= 3 && col <= 5), isHorizontal = (row >= 3 && row <= 5);
+            if (deletedCells.includes(i) || (!isVertical && !isHorizontal)) {
+                cell.classList.add('empty-space');
+            } else {
+                cell.classList.add('cell');
+                cell.dataset.index = i;
+                cell.innerText = i; 
+                if (i === startPointP1) cell.classList.add('red-start'); 
+                if (i === startPointP2) cell.classList.add('blue-start');
+                if (i === 31) cell.classList.add('red-home');
+                if (i === 49) cell.classList.add('blue-home'); 
+            }
+            board.appendChild(cell);
+        }
+
+        // ==========================================
+        // 🚨 چت و ارسال فایل (متن، عکس، فیلم)
+        // ==========================================
+        function toggleChat() {
+            const chatModal = document.getElementById('chat-modal');
+            chatModal.classList.toggle('hidden');
+            if (!chatModal.classList.contains('hidden')) {
+                document.getElementById('chat-input').focus();
+                loadChatHistory();
+            }
+        }
+        function handleChatEnter(e) { if (e.key === 'Enter') sendChatMessage(); }
+        
+        function sendChatMessage() {
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if (text === "") return;
+            const msgData = { type: 'text', content: text, sender: 'me' };
+            saveAndDisplayMessage(msgData);
+            socket.emit('chat-message', msgData);
+            input.value = '';
+        }
+
+        // ارسال فایل
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const fileData = e.target.result; // Base64
+                const msgData = { 
+                    type: file.type.startsWith('image') ? 'image' : 'video', 
+                    content: fileData, 
+                    sender: 'me' 
+                };
+                saveAndDisplayMessage(msgData);
+                socket.emit('chat-message', msgData);
+            };
+            reader.readAsDataURL(file);
+            event.target.value = ''; // ریست کردن اینپوت
+        }
+
+        socket.on('chat-message', (msgData) => {
+            msgData.sender = 'other';
+            saveAndDisplayMessage(msgData);
+        });
+
+        function saveAndDisplayMessage(msgData) {
+            // ذخیره در حافظه
+            let history = JSON.parse(localStorage.getItem('manchChatHistory')) || [];
+            history.push(msgData);
+            if (history.length > 30) history = history.slice(-30); // محدودیت حجم
+            localStorage.setItem('manchChatHistory', JSON.stringify(history));
+            
+            // نمایش در صفحه
+            displayMessageInDOM(msgData);
+        }
+
+        function displayMessageInDOM(msgData) {
+            const messagesDiv = document.getElementById('chat-messages');
+            const msgDiv = document.createElement('div');
+            msgDiv.classList.add('msg', msgData.sender);
+            
+            if (msgData.type === 'text') {
+                msgDiv.innerText = msgData.content;
+            } else if (msgData.type === 'image') {
+                const img = document.createElement('img');
+                img.src = msgData.content;
+                msgDiv.appendChild(img);
+            } else if (msgData.type === 'video') {
+                const vid = document.createElement('video');
+                vid.src = msgData.content;
+                vid.controls = true;
+                msgDiv.appendChild(vid);
+            }
+            
+            messagesDiv.appendChild(msgDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function loadChatHistory() {
+            const messagesDiv = document.getElementById('chat-messages');
+            messagesDiv.innerHTML = '';
+            let history = JSON.parse(localStorage.getItem('manchChatHistory')) || [];
+            history.forEach(msg => displayMessageInDOM(msg));
+        }
+
+        // جابه‌جایی کادر چت
+        const chatModal = document.getElementById('chat-modal');
+        let isDraggingChat = false, chatStartX, chatStartY, chatInitialLeft, chatInitialTop;
+        chatModal.addEventListener('pointerdown', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.classList.contains('chat-close')) return;
+            isDraggingChat = true;
+            chatModal.setPointerCapture(e.pointerId);
+            const rect = chatModal.getBoundingClientRect();
+            chatStartX = e.clientX; chatStartY = e.clientY;
+            chatInitialLeft = rect.left; chatInitialTop = rect.top;
+            chatModal.style.cursor = 'grabbing';
+        });
+        chatModal.addEventListener('pointermove', (e) => {
+            if (!isDraggingChat) return;
+            const dx = e.clientX - chatStartX, dy = e.clientY - chatStartY;
+            let newLeft = chatInitialLeft + dx, newTop = chatInitialTop + dy;
+            const maxLeft = window.innerWidth - chatModal.offsetWidth, maxTop = window.innerHeight - chatModal.offsetHeight;
+            if (newLeft < 0) newLeft = 0; if (newTop < 0) newTop = 0;
+            if (newLeft > maxLeft) newLeft = maxLeft; if (newTop > maxTop) newTop = maxTop;
+            chatModal.style.left = newLeft + 'px'; chatModal.style.top = newTop + 'px'; chatModal.style.right = 'auto';
+        });
+        chatModal.addEventListener('pointerup', (e) => { if (isDraggingChat) { isDraggingChat = false; chatModal.releasePointerCapture(e.pointerId); chatModal.style.cursor = 'grab'; } });
+
+        // ==========================================
+        // بقیه منطق بازی (بدون تغییر)
+        // ==========================================
+        function toggleTheme() {
+            document.body.classList.toggle('light-mode');
+            const isLight = document.body.classList.contains('light-mode');
+            document.getElementById('theme-icon').innerText = isLight ? '☀️' : '🌙';
+            localStorage.setItem('theme', isLight ? 'light' : 'dark');
+        }
+        window.onload = () => {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'light') { document.body.classList.add('light-mode'); document.getElementById('theme-icon').innerText = '☀️'; }
+        };
+        function toggleSettings() { document.getElementById('settings-menu').classList.toggle('hidden'); }
+        function toggleAccordion() { document.getElementById('online-accordion').classList.toggle('open'); }
+        function openOnlineList() { document.getElementById('online-accordion').classList.add('open'); document.getElementById('online-accordion').scrollIntoView({ behavior: 'smooth' }); }
+        document.addEventListener('click', function(event) {
+            const menu = document.getElementById('settings-menu');
+            const btn = document.querySelector('.menu-btn');
+            if (!menu.contains(event.target) && !btn.contains(event.target)) menu.classList.add('hidden');
+        });
+
         function getPersistentId() {
             let id = localStorage.getItem('manchPlayerId');
             if (!id) { id = Math.floor(1000 + Math.random() * 9000).toString(); localStorage.setItem('manchPlayerId', id); }
             return id;
         }
-        const myId = getPersistentId();
-        const socket = io("https://manch-server.onrender.com");
 
-        socket.on('connect', () => {
-            console.log("متصل شد!");
-            socket.emit('register-user', myId);
-        });
-
-        socket.on('your-id', (id) => {
-            document.getElementById('my-id').innerText = id;
+        socket.on('connect', () => { socket.emit('register-user', myId); });
+        socket.on('your-id', (id) => { 
+            myId = id; document.getElementById('settings-id').innerText = id; document.getElementById('settings-username').innerText = "بازیکن " + id;
         });
 
         socket.on('online-users-list', (users) => {
-            const list = document.getElementById('users-list');
-            list.innerHTML = '';
-            let found = false;
-            users.forEach(u => {
-                if (u.id !== myId) {
-                    found = true;
+            const list = document.getElementById('users-list'); list.innerHTML = ''; let hasOtherUsers = false;
+            users.forEach(user => {
+                if (user.id !== myId) { 
+                    hasOtherUsers = true;
                     const li = document.createElement('li');
-                    li.innerText = `بازیکن ${u.id} (${u.status})`;
-                    list.appendChild(li);
+                    const infoDiv = document.createElement('div'); infoDiv.className = 'user-info';
+                    const dot = document.createElement('span'); dot.className = `status-dot ${user.status === 'playing' ? 'playing' : ''}`;
+                    const nameSpan = document.createElement('span'); nameSpan.className = 'user-name'; nameSpan.innerText = `بازیکن ${user.id}`;
+                    infoDiv.appendChild(dot); infoDiv.appendChild(nameSpan);
+                    const btn = document.createElement('button'); btn.className = 'btn-request'; btn.innerText = user.status === 'playing' ? 'مشغول' : 'بازی';
+                    btn.disabled = user.status === 'playing'; btn.onclick = () => sendRequest(user.id);
+                    li.appendChild(infoDiv); li.appendChild(btn); list.appendChild(li);
                 }
             });
-            if (!found) list.innerHTML = '<li>هیچ کاربر دیگری آنلاین نیست.</li>';
+            if (!hasOtherUsers) list.innerHTML = '<li style="justify-content: center; color: var(--text-muted);">هیچ کاربر دیگری آنلاین نیست.</li>';
         });
+
+        function sendRequest(targetId) { opponentId = targetId; socket.emit('request-connect', targetId); document.querySelector('.action-desc').innerText = `در حال ارسال درخواست...`; }
+        socket.on('incoming-request', (data) => { opponentId = data.from; document.getElementById('req-id').innerText = data.from; document.getElementById('request-modal').classList.remove('hidden'); });
+        function acceptRequest() { document.getElementById('request-modal').classList.add('hidden'); socket.emit('accept-connect', opponentId); }
+        function rejectRequest() { document.getElementById('request-modal').classList.add('hidden'); socket.emit('reject-connect', opponentId); opponentId = null; }
+        socket.on('request-rejected', () => { document.querySelector('.action-desc').innerText = "درخواست شما رد شد."; });
+        socket.on('error-msg', (msg) => { alert(msg); });
+
+        socket.on('game-started', (data) => {
+            document.getElementById('lobby-header').classList.add('hidden'); document.getElementById('lobby-screen').classList.add('hidden');
+            document.getElementById('game-area').classList.remove('hidden'); document.getElementById('controls').classList.remove('hidden');
+            document.getElementById('chat-btn').classList.remove('hidden');
+            if (data.requester === myId) { myPlayerNumber = 1; } else { myPlayerNumber = 2; }
+            updateUI();
+            if (data.turn === myId) { isMyTurn = true; document.getElementById('turn-text').innerText = "شما شروع می‌کنید!"; document.getElementById('roll-btn').disabled = false; } 
+            else { isMyTurn = false; document.getElementById('turn-text').innerText = "منتظر حریف..."; document.getElementById('roll-btn').disabled = true; }
+        });
+
+        socket.on('game-over', (data) => { alert(`بازی تمام شد! ${data.winner === myId ? 'شما برنده شدید! 🎉' : 'حریف برنده شد! 😢'}`); location.reload(); });
+        socket.on('opponent-disconnected', () => { alert("حریف خارج شد! شما برنده شدید. 🎉"); location.reload(); });
+        
+        socket.on('turn-changed', (data) => {
+            if (data.nextTurn === myId) { isMyTurn = true; hasRolled = false; document.getElementById('turn-text').innerText = "نوبت شماست!"; document.getElementById('roll-btn').disabled = false; } 
+            else { isMyTurn = false; document.getElementById('turn-text').innerText = "منتظر حریف..."; document.getElementById('roll-btn').disabled = true; }
+            updateUI();
+        });
+
+        function updateDiceDisplay(number) {
+            const dots = ['d1','d2','d3','d4','d5','d6','d7','d8','d9']; dots.forEach(d => document.getElementById(d).classList.remove('visible'));
+            const patterns = { 1:[5], 2:[1,9], 3:[1,5,9], 4:[1,3,7,9], 5:[1,3,5,7,9], 6:[1,3,4,6,7,9] };
+            if (patterns[number]) patterns[number].forEach(pos => document.getElementById(`d${pos}`).classList.add('visible'));
+        }
+
+        function rollDice() {
+            if (!isMyTurn || hasRolled) return;
+            currentDice = Math.floor(Math.random() * 6) + 1; updateDiceDisplay(currentDice); hasRolled = true; document.getElementById('roll-btn').disabled = true;
+            socket.emit('dice-rolled', { dice: currentDice });
+            let canMove = false; const myPieces = pieces[myPlayerNumber];
+            if (currentDice === 6 && myPieces.includes(-1)) { canMove = true; } 
+            else { for (let pos of myPieces) { if (pos !== -1 && pos !== totalPathLength && pos + currentDice <= totalPathLength) { canMove = true; break; } } }
+            if (canMove) { document.getElementById('game-msg').innerText = `شما ${currentDice} آوردید. یک مهره انتخاب کنید.`; updateUI(); } 
+            else { document.getElementById('game-msg').innerText = `حرکتی ممکن نیست!`; setTimeout(() => { socket.emit('end-turn', { dice: 1 }); }, 1500); }
+        }
+
+        socket.on('opponent-dice', (data) => { updateDiceDisplay(data.dice); document.getElementById('game-msg').innerText = `حریف ${data.dice} آورد.`; });
+
+        function selectPiece(pieceIndex) {
+            if (!isMyTurn || !hasRolled) return;
+            const currentPos = pieces[myPlayerNumber][pieceIndex];
+            if (currentPos === -1 && currentDice !== 6) return; 
+            if (currentPos !== -1 && currentPos !== totalPathLength && currentPos + currentDice > totalPathLength) return; 
+            let newPos = (currentPos === -1) ? 0 : currentPos + currentDice; if (newPos > totalPathLength) newPos = totalPathLength;
+            pieces[myPlayerNumber][pieceIndex] = newPos;
+            let opponentPlayerNum = (myPlayerNumber === 1) ? 2 : 1; let killedPieceIndex = -1;
+            if (newPos < totalPathLength && newPos >= 0) { pieces[opponentPlayerNum].forEach((oppPos, oppIndex) => { if (oppPos === newPos) { pieces[opponentPlayerNum][oppIndex] = -1; killedPieceIndex = oppIndex; } }); }
+            socket.emit('make-move', { player: myPlayerNumber, pieceIndex: pieceIndex, newPos: newPos, killed: { player: opponentPlayerNum, pieceIndex: killedPieceIndex, newPos: -1 } });
+            let winCount = pieces[myPlayerNumber].filter(p => p === totalPathLength).length;
+            if (winCount === 3) { socket.emit('end-turn', { winner: myPlayerNumber }); return; }
+            if (currentDice === 6) socket.emit('end-turn', { dice: 6 }); else socket.emit('end-turn', { dice: 1 }); 
+        }
+
+        socket.on('opponent-move', (data) => { pieces[data.player][data.pieceIndex] = data.newPos; if (data.killed && data.killed.pieceIndex !== -1) { pieces[data.killed.player][data.killed.pieceIndex] = -1; } updateUI(); });
+
+        function updateUI() {
+            document.querySelectorAll('.piece').forEach(p => p.remove());
+            for (let p = 1; p <= 2; p++) {
+                const currentPath = (p === 1) ? pathP1 : pathP2;
+                pieces[p].forEach((pos, index) => {
+                    if (pos !== -1) {
+                        let cellIndex = (pos >= currentPath.length) ? currentPath[currentPath.length - 1] : currentPath[pos];
+                        const cell = document.querySelector(`.cell[data-index="${cellIndex}"]`);
+                        if (cell) {
+                            const pieceDiv = document.createElement('div'); pieceDiv.classList.add('piece', `p${p}`);
+                            if (pos >= totalPathLength) pieceDiv.classList.add('finished');
+                            if (p === myPlayerNumber && isMyTurn && hasRolled) { if ((pos === -1 && currentDice === 6) || (pos !== totalPathLength && pos + currentDice <= totalPathLength)) pieceDiv.classList.add('highlight'); }
+                            if (p === myPlayerNumber) pieceDiv.onclick = () => selectPiece(index);
+                            cell.appendChild(pieceDiv);
+                        }
+                    }
+                });
+            }
+            updateHomePieces();
+        }
+
+        function updateHomePieces() {
+            for (let p = 1; p <= 2; p++) {
+                const container = document.getElementById(`home-pieces-p${p}`); container.innerHTML = '';
+                pieces[p].forEach((pos, index) => {
+                    if (pos === -1) {
+                        const hp = document.createElement('div'); hp.classList.add('home-piece', `p${p}`);
+                        if (p === myPlayerNumber && isMyTurn && hasRolled && currentDice === 6) { hp.classList.add('highlight'); hp.onclick = () => selectPiece(index); }
+                        container.appendChild(hp);
+                    }
+                });
+            }
+        }
+
+        // WebRTC (تماس تصویری)
+        let localStream = null; let peerConnection = null; let isCamActive = false; let isMicActive = false;
+        const configuration = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+        async function toggleCam() {
+            const camBtn = document.getElementById('cam-btn'); const videoContainer = document.getElementById('video-container'); const localVideo = document.getElementById('local-video');
+            if (!isCamActive) {
+                try {
+                    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                    localVideo.srcObject = localStream; videoContainer.classList.remove('hidden'); camBtn.classList.add('active'); isCamActive = true; isMicActive = true; document.getElementById('mic-btn').classList.add('active');
+                    if (!peerConnection) createPeerConnection();
+                    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+                    const offer = await peerConnection.createOffer(); await peerConnection.setLocalDescription(offer); socket.emit('webrtc-signal', { type: 'offer', sdp: offer });
+                } catch (err) { alert("دسترسی به دوربین امکان‌پذیر نیست."); }
+            } else {
+                if (localStream) localStream.getTracks().forEach(track => track.stop()); localStream = null; localVideo.srcObject = null; videoContainer.classList.add('hidden'); camBtn.classList.remove('active'); isCamActive = false; isMicActive = false; document.getElementById('mic-btn').classList.remove('active');
+                if (peerConnection) { peerConnection.close(); peerConnection = null; }
+            }
+        }
+        async function toggleMic() {
+            const micBtn = document.getElementById('mic-btn');
+            if (!isMicActive) {
+                try {
+                    localStream = await navigator.mediaDevices.getUserMedia({ audio: true }); micBtn.classList.add('active'); isMicActive = true;
+                    if (!peerConnection) createPeerConnection();
+                    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+                    const offer = await peerConnection.createOffer(); await peerConnection.setLocalDescription(offer); socket.emit('webrtc-signal', { type: 'offer', sdp: offer });
+                } catch (err) { alert("دسترسی به میکروفون امکان‌پذیر نیست."); }
+            } else {
+                if (localStream) localStream.getTracks().forEach(track => track.stop()); localStream = null; micBtn.classList.remove('active'); isMicActive = false;
+                if (peerConnection) { peerConnection.close(); peerConnection = null; }
+            }
+        }
+        function createPeerConnection() {
+            peerConnection = new RTCPeerConnection(configuration);
+            peerConnection.ontrack = (event) => { document.getElementById('remote-video').srcObject = event.streams[0]; };
+            peerConnection.onicecandidate = (event) => { if (event.candidate) { socket.emit('webrtc-signal', { type: 'candidate', candidate: event.candidate }); } };
+        }
+        socket.on('webrtc-signal', async (data) => {
+            if (!peerConnection) createPeerConnection();
+            if (data.type === 'offer') { await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp)); const answer = await peerConnection.createAnswer(); await peerConnection.setLocalDescription(answer); socket.emit('webrtc-signal', { type: 'answer', sdp: answer }); document.getElementById('video-container').classList.remove('hidden'); } 
+            else if (data.type === 'answer') { await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp)); } 
+            else if (data.type === 'candidate') { await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate)); }
+        });
+
+        // جابه‌جایی کادر ویدیو
+        const dragElement = document.getElementById('video-container');
+        let isDragging = false, startX, startY, initialLeft, initialTop;
+        dragElement.addEventListener('pointerdown', (e) => { isDragging = true; dragElement.setPointerCapture(e.pointerId); const rect = dragElement.getBoundingClientRect(); startX = e.clientX; startY = e.clientY; initialLeft = rect.left; initialTop = rect.top; dragElement.style.cursor = 'grabbing'; });
+        dragElement.addEventListener('pointermove', (e) => { if (!isDragging) return; const dx = e.clientX - startX, dy = e.clientY - startY; let newLeft = initialLeft + dx, newTop = initialTop + dy; const maxLeft = window.innerWidth - dragElement.offsetWidth, maxTop = window.innerHeight - dragElement.offsetHeight; if (newLeft < 0) newLeft = 0; if (newTop < 0) newTop = 0; if (newLeft > maxLeft) newLeft = maxLeft; if (newTop > maxTop) newTop = maxTop; dragElement.style.left = newLeft + 'px'; dragElement.style.top = newTop + 'px'; dragElement.style.right = 'auto'; });
+        dragElement.addEventListener('pointerup', (e) => { if (isDragging) { isDragging = false; dragElement.releasePointerCapture(e.pointerId); dragElement.style.cursor = 'grab'; } });
+        dragElement.addEventListener('pointercancel', () => { isDragging = false; });
     </script>
 </body>
 </html>
