@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://manch-server.onrender.com/socket.io/socket.io.js"></script>
+</head>
+<body style="background:#0f172a; color:white; text-align:center; padding:50px; font-family:Tahoma;">
+    <h1>صفحه تست اتصال</h1>
+    <p>وضعیت اتصال: <span id="status" style="color:yellow;">در حال اتصال...</span></p>
+    <button onclick="test()" style="padding:15px 30px; font-size:18px; cursor:pointer;">تست اتصال</button>
+    <script>
+        const socket = io("https://manch-server.onrender.com");
+        
+        socket.on('connect', () => {
+            document.getElementById('status').innerText = "✅ متصل به سرور شد!";
+            document.getElementById('status').style.color = "#06C755";
+        });
+        
+        socket.on('connect_error', (err) => {
+            document.getElementById('status').innerText = "❌ خطا: " + err.message;
+            document.getElementById('status').style.color = "red";
+        });
+        
+        function test() {
+            socket.emit('register-user', '9999');
+            alert('درخواست ارسال شد.');
+        }
+    </script>
+</body>
+</html>
