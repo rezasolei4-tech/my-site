@@ -19,12 +19,12 @@
         body { background: var(--bg-color); color: var(--text-color); display: flex; flex-direction: column; min-height: 100vh; overflow-x: hidden; transition: background 0.3s, color 0.3s; }
         .hidden { display: none !important; }
         
-        /* هدر */
+        /* 🚨 هدر بالا (لابی) */
         .header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: var(--header-bg); box-shadow: 0 2px 10px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 50; border-bottom: 1px solid var(--border-color); }
         .header-title { font-size: 18px; font-weight: bold; color: var(--text-color); }
         .menu-btn { background: transparent; border: none; color: var(--text-muted); font-size: 28px; cursor: pointer; width: auto; padding: 0 10px; box-shadow: none; }
         
-        /* منوی تنظیمات */
+        /* منوی سه نقطه (تنظیمات) */
         #settings-menu { position: absolute; top: 60px; left: 20px; background: var(--card-bg); border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 250px; z-index: 100; border: 1px solid var(--border-color); overflow: hidden; }
         .settings-item { padding: 15px; border-bottom: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 5px; }
         .settings-label { font-size: 12px; color: var(--text-muted); }
@@ -34,7 +34,7 @@
         .theme-toggle:hover { color: #06C755; }
         .theme-icon { font-size: 20px; }
 
-        /* لابی */
+        /* 🚨 لابی */
         .main-content { padding: 20px; display: flex; flex-direction: column; gap: 15px; max-width: 500px; margin: 0 auto; width: 100%; }
         .accordion { background: var(--card-bg); border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color); }
         .accordion-header { padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: var(--card-bg); }
@@ -57,7 +57,7 @@
         .action-desc { font-size: 14px; color: var(--text-muted); margin-bottom: 20px; line-height: 1.6; }
         .btn-main-action { background: var(--btn-bg); color: white; border: none; padding: 15px; border-radius: 12px; font-size: 18px; font-weight: bold; cursor: pointer; width: 100%; transition: 0.2s; display: flex; justify-content: center; align-items: center; gap: 10px; }
 
-        /* مودال و زمین و تاس */
+        /* 🚨 مودال، زمین، تاس و ... */
         #request-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000; }
         .modal-content { background: var(--card-bg); padding: 25px; border-radius: 20px; text-align: center; width: 85%; max-width: 320px; border: 1px solid var(--border-color); }
         .modal-content button { margin-top: 15px; margin-right: 5px; width: 45%; display: inline-block; padding: 12px; border-radius: 10px; font-weight: bold; border: none; cursor: pointer; }
@@ -88,7 +88,7 @@
         #turn-text { font-size: 16px; font-weight: bold; color: #fbbf24; margin-bottom: 10px; text-align: center; }
         #game-msg { color: var(--text-muted); font-size: 14px; margin-bottom: 10px; text-align: center; min-height: 20px; }
 
-        /* کنترل‌ها و ویدیو */
+        /* 🚨 کنترل‌ها و ویدیو */
         #controls { position: fixed; bottom: 20px; left: 20px; display: flex; gap: 10px; z-index: 100; }
         .control-btn { width: 55px; height: 55px; border-radius: 50%; font-size: 26px; background: var(--card-bg); border: 2px solid var(--border-color); cursor: pointer; display: flex; align-items: center; justify-content: center; }
         .control-btn.active { background: #ef4444; border-color: #fca5a5; animation: pulse 1.5s infinite; }
@@ -96,7 +96,7 @@
         #remote-video, #local-video { width: 100%; height: 50%; object-fit: cover; background: #1e293b; pointer-events: none; }
         #local-video { transform: scaleX(-1); }
 
-        /* 🚨 دکمه چت سه بعدی */
+        /* 🚨 دکمه چت (سبز و سه بعدی) */
         #chat-btn {
             display: flex; justify-content: center; align-items: center;
             background: linear-gradient(145deg, #05a648, #06C755);
@@ -139,7 +139,7 @@
 </head>
 <body>
 
-    <!-- هدر اصلی (لابی) -->
+    <!-- 🚨 هدر بالا (لابی) -->
     <div class="header" id="lobby-header">
         <div class="header-title">منچ آنلاین</div>
         <button class="menu-btn" onclick="toggleSettings()">⋮</button>
@@ -152,7 +152,7 @@
         <div class="settings-item"><div class="theme-toggle" onclick="toggleTheme()"><span>تم روشن / تاریک</span><span class="theme-icon" id="theme-icon">🌙</span></div></div>
     </div>
 
-    <!-- لابی اصلی -->
+    <!-- لابی -->
     <div class="main-content" id="lobby-screen">
         <div class="accordion" id="online-accordion">
             <div class="accordion-header" onclick="toggleAccordion()"><div class="accordion-title">لیست کاربران آنلاین</div><div class="accordion-icon">▼</div></div>
@@ -165,7 +165,7 @@
         </div>
     </div>
 
-    <!-- مودال درخواست بازی -->
+    <!-- مودال درخواست -->
     <div id="request-modal" class="hidden">
         <div class="modal-content">
             <h3 style="margin-bottom: 15px; color: #fbbf24; font-size: 22px;">📩 درخواست بازی!</h3>
@@ -179,7 +179,7 @@
 
     <!-- صفحه بازی -->
     <div id="game-area" class="hidden" style="display: flex; flex-direction: column; align-items: center; width: 100%; padding: 10px;">
-        <!-- 🚨 دکمه چت بالای بازی -->
+        <!-- 🚨 دکمه چت -->
         <button id="chat-btn" class="hidden" onclick="toggleChat()">💬</button>
 
         <div id="turn-text">نوبت شماست!</div>
@@ -223,7 +223,7 @@
 
     <script>
         // ==========================================
-        // 🚨 چت با ذخیره‌سازی و جابه‌جایی
+        // 🚨 چت
         // ==========================================
         function toggleChat() {
             const chatModal = document.getElementById('chat-modal');
@@ -376,14 +376,20 @@
             board.appendChild(cell);
         }
 
-        socket.on('connect', () => { socket.emit('register-user', myId); });
+        socket.on('connect', () => { 
+            console.log("متصل به سرور شد!");
+            socket.emit('register-user', myId); 
+        });
+        
         socket.on('your-id', (id) => { 
             myId = id; 
             document.getElementById('settings-id').innerText = id; 
             document.getElementById('settings-username').innerText = "بازیکن " + id;
         });
 
+        // 🚨 دریافت لیست کاربران آنلاین
         socket.on('online-users-list', (users) => {
+            console.log("لیست کاربران دریافت شد:", users);
             const list = document.getElementById('users-list');
             list.innerHTML = ''; 
             let hasOtherUsers = false;
@@ -439,13 +445,10 @@
         socket.on('error-msg', (msg) => { alert(msg); document.querySelector('.action-desc').innerText = msg; });
 
         socket.on('game-started', (data) => {
-            // 🚨 هدر و لابی رو مخفی می‌کنیم و بازی رو نشون می‌دیم
             document.getElementById('lobby-header').classList.add('hidden');
             document.getElementById('lobby-screen').classList.add('hidden');
             document.getElementById('game-area').classList.remove('hidden');
             document.getElementById('controls').classList.remove('hidden');
-            
-            // نمایش دکمه چت بالای بازی
             document.getElementById('chat-btn').classList.remove('hidden');
 
             if (data.requester === myId) { myPlayerNumber = 1; } else { myPlayerNumber = 2; }
