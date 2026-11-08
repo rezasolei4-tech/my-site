@@ -6,112 +6,266 @@
     <title>بازی منچ آنلاین</title>
     <script src="https://manch-server.onrender.com/socket.io/socket.io.js"></script>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: Tahoma, sans-serif; background: #1a1a2e; color: white; display: flex; flex-direction: column; align-items: center; padding: 10px; min-height: 100vh; }
-        h1 { color: #06C755; margin-bottom: 10px; font-size: 20px; }
-        
-        .card { background: #16213e; padding: 15px; border-radius: 10px; width: 100%; max-width: 400px; margin-bottom: 15px; text-align: center; }
+        /* 🚨 متغیرهای تم (رنگ‌ها) */
+        :root {
+            --bg-color: #0f172a;
+            --header-bg: #1e293b;
+            --card-bg: #1e293b;
+            --card-hover: #2d3748;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --border-color: #334155;
+            --accent-color: #06C755;
+            --accent-hover: #05a648;
+            --modal-bg: #1e293b;
+        }
+
+        /* تم روشن */
+        .light-theme {
+            --bg-color: #f1f5f9;
+            --header-bg: #ffffff;
+            --card-bg: #ffffff;
+            --card-hover: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #cbd5e1;
+            --accent-color: #06C755;
+            --accent-hover: #05a648;
+            --modal-bg: #ffffff;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: Tahoma, sans-serif; }
+        body { 
+            background: var(--bg-color); 
+            color: var(--text-primary); 
+            display: flex; flex-direction: column; 
+            min-height: 100vh; 
+            overflow-x: hidden;
+            transition: background 0.3s, color 0.3s;
+        }
         .hidden { display: none !important; }
         
-        /* لابی */
-        .lobby-header { font-size: 18px; margin-bottom: 10px; color: #fbbf24; }
-        #users-list { list-style: none; max-height: 200px; overflow-y: auto; margin-bottom: 15px; background: #0f172a; border-radius: 8px; padding: 10px; }
-        #users-list li { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #334155; }
-        #users-list li:last-child { border-bottom: none; }
+        /* هدر بالا */
+        .header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 15px 20px;
+            background: var(--header-bg);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky; top: 0; z-index: 50;
+            transition: background 0.3s;
+        }
+        .header-title { font-size: 18px; font-weight: bold; color: var(--text-primary); }
+        .menu-btn {
+            background: transparent; border: none; color: var(--text-secondary);
+            font-size: 28px; cursor: pointer; transition: 0.2s;
+            width: auto; padding: 0 10px; box-shadow: none;
+        }
+        .menu-btn:hover { color: var(--text-primary); }
+
+        /* منوی سه نقطه */
+        #settings-menu {
+            position: absolute; top: 60px; left: 20px;
+            background: var(--card-bg); border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            width: 260px; z-index: 100;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            animation: fadeIn 0.2s ease-out;
+            transition: background 0.3s;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .settings-item {
+            padding: 15px; border-bottom: 1px solid var(--border-color);
+            display: flex; flex-direction: column; gap: 5px;
+        }
+        .settings-item:last-child { border-bottom: none; }
+        .settings-label { font-size: 12px; color: var(--text-secondary); }
+        .settings-value { font-size: 18px; font-weight: bold; color: var(--accent-color); }
+        .settings-name { font-size: 16px; font-weight: bold; color: var(--text-primary); }
+        
+        /* 🚨 گزینه تغییر تم (متن ساده) */
+        .theme-toggle {
+            padding: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+            font-size: 15px; color: var(--text-primary); transition: 0.2s;
+            border-top: 1px solid var(--border-color);
+        }
+        .theme-toggle:hover { background: var(--card-hover); }
+        .theme-toggle-icon { font-size: 20px; }
+
+        /* محتوای اصلی */
+        .main-content {
+            padding: 20px; display: flex; flex-direction: column; gap: 15px;
+            max-width: 500px; margin: 0 auto; width: 100%;
+        }
+
+        /* کادر لیست کاربران (جمع‌شونده) */
+        .accordion {
+            background: var(--card-bg); border-radius: 12px; overflow: hidden;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            transition: background 0.3s;
+        }
+        .accordion-header {
+            padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;
+            cursor: pointer; background: var(--card-bg); transition: 0.2s;
+        }
+        .accordion-header:hover { background: var(--card-hover); }
+        .accordion-title { font-size: 16px; font-weight: bold; color: var(--text-primary); display: flex; align-items: center; gap: 10px;}
+        .accordion-title::before { content: '🟢'; font-size: 12px; }
+        .accordion-icon { transition: transform 0.3s; color: var(--text-secondary); }
+        .accordion.open .accordion-icon { transform: rotate(180deg); }
+        
+        .accordion-content {
+            max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out;
+            background: var(--bg-color);
+        }
+        .accordion.open .accordion-content { max-height: 300px; overflow-y: auto; }
+        
+        #users-list { list-style: none; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+        #users-list li { 
+            display: flex; justify-content: space-between; align-items: center; 
+            padding: 12px 15px; background: var(--card-bg); border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
         .user-info { display: flex; align-items: center; gap: 10px; }
-        .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #06C755; }
+        .user-name { font-size: 15px; color: var(--text-primary); }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-color); }
         .status-dot.playing { background: #ef4444; }
-        .btn-request { background: #06C755; color: white; border: none; padding: 5px 15px; border-radius: 5px; cursor: pointer; font-size: 14px; }
-        .btn-request:disabled { background: #555; cursor: not-allowed; }
+        .btn-request { 
+            background: var(--accent-color); color: white; border: none; padding: 6px 12px; 
+            border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold;
+            width: auto;
+        }
+        .btn-request:disabled { background: #475569; cursor: not-allowed; }
 
-        /* مودال درخواست */
-        #request-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-        .modal-content { background: #16213e; padding: 20px; border-radius: 10px; text-align: center; width: 80%; max-width: 300px; }
-        .modal-content button { margin-top: 10px; margin-right: 5px; width: 45%; display: inline-block; }
-        .btn-reject { background: #ef4444; }
+        /* کادر توضیحات پایین */
+        .action-card {
+            background: var(--card-bg); border-radius: 15px; padding: 25px 20px;
+            text-align: center; border: 1px solid var(--border-color);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            margin-top: auto;
+            transition: background 0.3s;
+        }
+        .action-title { font-size: 20px; font-weight: bold; color: #fbbf24; margin-bottom: 10px; }
+        .action-desc { font-size: 14px; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.6; }
+        
+        /* دکمه اصلی بازی */
+        .btn-main-action {
+            background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
+            color: white; border: none; padding: 15px;
+            border-radius: 12px; font-size: 18px; font-weight: bold;
+            cursor: pointer; width: 100%; transition: 0.2s;
+            box-shadow: 0 4px 15px rgba(6, 199, 85, 0.4);
+            display: flex; justify-content: center; align-items: center; gap: 10px;
+        }
+        .btn-main-action:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(6, 199, 85, 0.6); }
 
-        button { background: #06C755; color: white; border: none; padding: 10px; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; width: 100%; transition: 0.2s; }
-        button:disabled { background: #555; cursor: not-allowed; opacity: 0.7; }
+        /* بقیه استایل‌ها */
+        #request-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(5px); }
+        .modal-content { background: var(--modal-bg); padding: 25px; border-radius: 20px; text-align: center; width: 85%; max-width: 320px; border: 1px solid var(--border-color); box-shadow: 0 20px 50px rgba(0,0,0,0.3); transition: background 0.3s; }
+        .modal-content button { margin-top: 15px; margin-right: 5px; width: 45%; display: inline-block; padding: 12px; border-radius: 10px; font-weight: bold; border: none; cursor: pointer; transition: 0.2s;}
+        .btn-reject { background: #ef4444; color: white; }
+        .btn-accept { background: var(--accent-color); color: white; }
 
-        .board-wrapper { background: #d2a679; padding: 5px; border-radius: 10px; border: 3px solid #8b5a2b; width: 95vw; max-width: 450px; aspect-ratio: 1 / 1; margin-bottom: 15px; }
-        #game-board { display: grid; grid-template-columns: repeat(9, 1fr); grid-template-rows: repeat(9, 1fr); gap: 2px; width: 100%; height: 100%; }
+        .board-wrapper { background: linear-gradient(135deg, #2a2a72 0%, #1a1a4e 100%); padding: 10px; border-radius: 20px; border: 4px solid #3b3b8c; width: 95vw; max-width: 450px; aspect-ratio: 1 / 1; margin-bottom: 15px; margin: 0 auto; box-shadow: 0 20px 50px rgba(0,0,0,0.5), inset 0 0 20px rgba(0,0,0,0.3); }
+        #game-board { display: grid; grid-template-columns: repeat(9, 1fr); grid-template-rows: repeat(9, 1fr); gap: 3px; width: 100%; height: 100%; }
         .empty-space { background: transparent; }
-        
-        .cell { background-color: white; border-radius: 50%; border: 1px solid #333; display: flex; align-items: center; justify-content: center; position: relative; color: #555; font-size: 12px; font-weight: bold;}
-        
-        .cell.red-start { background-color: #ff4444; color: white;}
-        .cell.blue-start { background-color: #4444ff; color: white;}
-        .cell.red-home { background-color: #ff9999; border: 2px solid #ff0000; }
-        .cell.blue-home { background-color: #9999ff; border: 2px solid #0000ff; }
-        
-        .piece { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 22px; position: absolute; z-index: 10; cursor: pointer; transition: transform 0.2s; }
+        .cell { background: radial-gradient(circle at 30% 30%, #ffffff, #d1d5db); border-radius: 50%; border: 2px solid #6b7280; display: flex; align-items: center; justify-content: center; position: relative; color: #374151; font-size: 12px; font-weight: bold; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2), 0 2px 5px rgba(0,0,0,0.3); transition: 0.2s; }
+        .cell.red-start { background: radial-gradient(circle at 30% 30%, #ff6b6b, #dc2626); color: white; border-color: #991b1b; box-shadow: 0 0 15px rgba(220, 38, 38, 0.6); }
+        .cell.blue-start { background: radial-gradient(circle at 30% 30%, #60a5fa, #2563eb); color: white; border-color: #1e3a8a; box-shadow: 0 0 15px rgba(37, 99, 235, 0.6); }
+        .cell.red-home { background: radial-gradient(circle at 30% 30%, #fca5a5, #f87171); border-color: #ef4444; box-shadow: 0 0 10px rgba(239, 68, 68, 0.4); }
+        .cell.blue-home { background: radial-gradient(circle at 30% 30%, #93c5fd, #60a5fa); border-color: #3b82f6; box-shadow: 0 0 10px rgba(59, 130, 246, 0.4); }
+        .piece { width: 90%; height: 90%; display: flex; align-items: center; justify-content: center; font-size: 24px; position: absolute; z-index: 10; cursor: pointer; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4)); }
         .piece.p1::after { content: '🐱'; }
         .piece.p2::after { content: '🐶'; }
-        .piece.highlight { border: 2px solid yellow; border-radius: 50%; box-shadow: 0 0 15px yellow; transform: scale(1.2); animation: bounce 0.5s infinite alternate; }
-        .piece.finished { filter: drop-shadow(0 0 5px gold); }
-
+        .piece.highlight { border: 2px solid #fbbf24; border-radius: 50%; box-shadow: 0 0 20px #fbbf24; transform: scale(1.2); animation: bounce 0.6s infinite alternate; }
+        .piece.finished { filter: drop-shadow(0 0 10px gold); }
         @keyframes bounce { from { transform: scale(1.1); } to { transform: scale(1.3); } }
-
-        .dice-container { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; max-width: 400px; }
-        .dice { width: 60px; height: 60px; background: white; border-radius: 10px; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); padding: 8px; gap: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-        .dot { background: black; border-radius: 50%; width: 100%; height: 100%; display: none; }
+        .dice-container { display: flex; flex-direction: column; align-items: center; gap: 15px; width: 100%; max-width: 400px; margin: 0 auto; }
+        .dice { width: 70px; height: 70px; background: linear-gradient(135deg, #ffffff, #e5e7eb); border-radius: 15px; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); padding: 10px; gap: 5px; box-shadow: 0 10px 20px rgba(0,0,0,0.4), inset 0 -2px 5px rgba(0,0,0,0.1); }
+        .dot { background: #1f2937; border-radius: 50%; width: 100%; height: 100%; display: none; box-shadow: inset 0 2px 2px rgba(255,255,255,0.3); }
         .dot.visible { display: block; }
-
         .home-pieces { display: flex; justify-content: center; gap: 15px; margin-bottom: 10px; }
-        .home-piece { width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; font-size: 24px; border-radius: 50%; border: 2px solid #fff; transition: 0.2s; background: #0f172a; }
+        .home-piece { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 26px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.2); transition: 0.2s; background: rgba(15, 23, 42, 0.5); box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
         .home-piece.p1::after { content: '🐱'; }
         .home-piece.p2::after { content: '🐶'; }
-        .home-piece.highlight { border: 2px solid yellow; box-shadow: 0 0 15px yellow; transform: scale(1.2); cursor: pointer; }
-
-        #turn-text { font-size: 16px; font-weight: bold; color: #fbbf24; margin-bottom: 10px; text-align: center; }
-        #game-msg { color: #94a3b8; font-size: 14px; margin-bottom: 10px; text-align: center; min-height: 20px; }
-
+        .home-piece.highlight { border: 2px solid #fbbf24; box-shadow: 0 0 15px #fbbf24; transform: scale(1.15); cursor: pointer; }
+        #turn-text { font-size: 16px; font-weight: bold; color: #fbbf24; margin-bottom: 10px; text-align: center; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+        #game-msg { color: var(--text-secondary); font-size: 14px; margin-bottom: 10px; text-align: center; min-height: 20px; }
         #controls { position: fixed; bottom: 20px; left: 20px; display: flex; gap: 10px; z-index: 100; }
-        .control-btn { width: 50px; height: 50px; border-radius: 50%; font-size: 24px; background: #334155; border: 2px solid #94a3b8; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-        .control-btn.active { background: #ef4444; border-color: #fca5a5; animation: pulse 1.5s infinite; }
-
-        #video-container { position: fixed; top: 10px; right: 10px; width: 110px; height: 150px; background: #000; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; border: 2px solid #06C755; z-index: 200; box-shadow: 0 4px 15px rgba(0,0,0,0.7); cursor: grab; touch-action: none; transition: opacity 0.2s; }
-        #video-container:active { cursor: grabbing; opacity: 0.8; }
+        .control-btn { width: 55px; height: 55px; border-radius: 50%; font-size: 26px; background: linear-gradient(135deg, #334155, #1e293b); border: 2px solid #64748b; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.5); transition: 0.2s; }
+        .control-btn.active { background: linear-gradient(135deg, #ef4444, #dc2626); border-color: #fca5a5; animation: pulse 1.5s infinite; }
+        #video-container { position: fixed; top: 10px; right: 10px; width: 120px; height: 160px; background: #000; border-radius: 15px; overflow: hidden; display: flex; flex-direction: column; border: 2px solid var(--accent-color); z-index: 200; box-shadow: 0 10px 25px rgba(0,0,0,0.7); cursor: grab; touch-action: none; transition: opacity 0.2s, transform 0.2s; }
+        #video-container:active { cursor: grabbing; opacity: 0.8; transform: scale(0.95); }
         #remote-video { width: 100%; height: 50%; object-fit: cover; background: #1e293b; border-bottom: 1px solid #334155; pointer-events: none; }
         #local-video { width: 100%; height: 50%; object-fit: cover; background: #1e293b; transform: scaleX(-1); pointer-events: none; }
-        
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
     </style>
 </head>
 <body>
 
-    <h1>🎲 بازی منچ آنلاین</h1>
+    <div class="header" id="lobby-header">
+        <div class="header-title">منچ آنلاین</div>
+        <button class="menu-btn" onclick="toggleSettings()">⋮</button>
+    </div>
 
-    <div class="card" id="lobby-screen">
-        <div class="lobby-header">آیدی اختصاصی شما: <span id="my-id" style="color: #06C755;">...</span></div>
-        <p style="margin-bottom: 10px;">کاربران آنلاین:</p>
-        <ul id="users-list">
-            <li style="justify-content: center; color: #94a3b8;">در حال دریافت لیست...</li>
-        </ul>
-        <div id="status" style="font-size: 14px; color: #94a3b8;">در حال اتصال به سرور...</div>
+    <div id="settings-menu" class="hidden">
+        <div class="settings-item">
+            <span class="settings-label">نام کاربری</span>
+            <span class="settings-name" id="settings-username">بازیکن مهمان</span>
+        </div>
+        <div class="settings-item">
+            <span class="settings-label">آیدی ثابت شما</span>
+            <span class="settings-value" id="settings-id">...</span>
+        </div>
+        <!-- 🚨 گزینه تغییر تم -->
+        <div class="theme-toggle" onclick="toggleTheme()">
+            <span>تغییر تم (روشن/تاریک)</span>
+            <span class="theme-toggle-icon" id="theme-icon">🌙</span>
+        </div>
+    </div>
+
+    <div class="main-content" id="lobby-screen">
+        <div class="accordion" id="online-accordion">
+            <div class="accordion-header" onclick="toggleAccordion()">
+                <div class="accordion-title">لیست کاربران آنلاین</div>
+                <div class="accordion-icon">▼</div>
+            </div>
+            <div class="accordion-content">
+                <ul id="users-list">
+                    <li style="justify-content: center; color: #94a3b8;">در حال دریافت لیست...</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="action-card">
+            <div class="action-title">🎮 بازی و تماس تصویری دونفره</div>
+            <div class="action-desc">
+                برای شروع، یک نفر از لیست آنلاین‌ها را انتخاب کنید و درخواست بازی بفرستید. بعد از قبول شدن، می‌توانید تماس تصویری و صوتی برقرار کنید.
+            </div>
+            <button class="btn-main-action" onclick="openOnlineList()">
+                <span>👥</span> مشاهده لیست آنلاین‌ها و شروع بازی
+            </button>
+        </div>
     </div>
 
     <div id="request-modal" class="hidden">
         <div class="modal-content">
-            <h3 style="margin-bottom: 10px;">درخواست بازی!</h3>
-            <p>کاربر <span id="req-id" style="color: #fbbf24; font-weight: bold;"></span> می‌خواد با شما بازی کنه.</p>
-            <div style="display: flex; justify-content: space-between;">
-                <button class="btn-reject" onclick="rejectRequest()">رد</button>
-                <button onclick="acceptRequest()">قبول</button>
+            <h3 style="margin-bottom: 15px; color: #fbbf24; font-size: 22px;">📩 درخواست بازی!</h3>
+            <p style="color: var(--text-primary);">کاربر <br><span id="req-id" style="color: var(--accent-color); font-weight: bold; font-size: 28px; display: block; margin: 10px 0;"></span> می‌خواد با شما بازی کنه.</p>
+            <div style="display: flex; justify-content: space-between; margin-top: 20px;">
+                <button class="btn-reject" onclick="rejectRequest()" style="width: 45%;">رد</button>
+                <button class="btn-accept" onclick="acceptRequest()" style="width: 45%;">قبول</button>
             </div>
         </div>
     </div>
 
-    <div id="game-area" class="hidden" style="display: flex; flex-direction: column; align-items: center; width: 100%;">
+    <div id="game-area" class="hidden" style="display: flex; flex-direction: column; align-items: center; width: 100%; padding: 10px;">
         <div id="turn-text">نوبت شماست!</div>
-        
         <div class="home-pieces" id="home-pieces-p1"></div>
         <div class="home-pieces" id="home-pieces-p2"></div>
-
-        <div class="board-wrapper">
-            <div id="game-board"></div>
-        </div>
-        
+        <div class="board-wrapper"><div id="game-board"></div></div>
         <div class="dice-container">
             <div class="dice" id="dice-display">
                 <div class="dot" id="d1"></div><div class="dot" id="d2"></div><div class="dot" id="d3"></div>
@@ -134,7 +288,52 @@
     </div>
 
     <script>
-        // 🚨 تولید یا خواندن آیدی ثابت از حافظه مرورگر
+        // --- مدیریت تم (روشن/تاریک) ---
+        function toggleTheme() {
+            const body = document.body;
+            const icon = document.getElementById('theme-icon');
+            body.classList.toggle('light-theme');
+            
+            if (body.classList.contains('light-theme')) {
+                icon.innerText = '☀️';
+                localStorage.setItem('manchTheme', 'light');
+            } else {
+                icon.innerText = '🌙';
+                localStorage.setItem('manchTheme', 'dark');
+            }
+        }
+
+        // بارگذاری تم ذخیره شده در هنگام باز شدن صفحه
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('manchTheme');
+            if (savedTheme === 'light') {
+                document.body.classList.add('light-theme');
+                document.getElementById('theme-icon').innerText = '☀️';
+            }
+        });
+
+        // --- توابع UI ---
+        function toggleSettings() {
+            const menu = document.getElementById('settings-menu');
+            menu.classList.toggle('hidden');
+        }
+        function toggleAccordion() {
+            document.getElementById('online-accordion').classList.toggle('open');
+        }
+        function openOnlineList() {
+            const acc = document.getElementById('online-accordion');
+            acc.classList.add('open');
+            acc.scrollIntoView({ behavior: 'smooth' });
+        }
+        document.addEventListener('click', function(event) {
+            const menu = document.getElementById('settings-menu');
+            const btn = document.querySelector('.menu-btn');
+            if (!menu.contains(event.target) && !btn.contains(event.target)) {
+                menu.classList.add('hidden');
+            }
+        });
+
+        // --- منطق بازی ---
         function getPersistentId() {
             let id = localStorage.getItem('manchPlayerId');
             if (!id) {
@@ -153,24 +352,20 @@
         let opponentId = null;
 
         let pieces = { 1: [-1, -1, -1], 2: [-1, -1, -1] };
-
         const deletedCells = [37, 38, 39, 40, 41, 42, 43];
         const pathP1 = [4, 3, 12, 21, 30, 29, 28, 27, 36, 45, 46, 47, 48, 57, 66, 75, 76, 77, 68, 59, 50, 51, 52, 53, 44, 35, 34, 33, 32, 23, 14, 5, 13, 22, 31];
         const pathP2 = [77, 68, 59, 50, 51, 52, 53, 44, 35, 34, 33, 32, 23, 14, 5, 4, 3, 12, 21, 30, 29, 28, 27, 36, 45, 46, 47, 48, 57, 66, 75, 67, 58, 49];
-
         const startPointP1 = 4;
         const startPointP2 = 76;
         const totalPathLength = pathP1.length - 1; 
 
         const board = document.getElementById('game-board');
-
         for (let i = 0; i < 81; i++) {
             const cell = document.createElement('div');
             const row = Math.floor(i / 9);
             const col = i % 9;
             const isVertical = (col >= 3 && col <= 5);
             const isHorizontal = (row >= 3 && row <= 5);
-
             if (deletedCells.includes(i) || (!isVertical && !isHorizontal)) {
                 cell.classList.add('empty-space');
             } else {
@@ -185,20 +380,16 @@
             board.appendChild(cell);
         }
 
-        // 🚨 به محض اتصال، آیدی ثابت رو به سرور معرفی کن
-        socket.on('connect', () => {
-            socket.emit('register-user', myId);
-        });
-
+        socket.on('connect', () => { socket.emit('register-user', myId); });
         socket.on('your-id', (id) => { 
             myId = id; 
-            document.getElementById('my-id').innerText = id; 
+            document.getElementById('settings-id').innerText = id; 
+            document.getElementById('settings-username').innerText = "بازیکن " + id;
         });
 
         socket.on('online-users-list', (users) => {
             const list = document.getElementById('users-list');
             list.innerHTML = ''; 
-            
             let hasOtherUsers = false;
             users.forEach(user => {
                 if (user.id !== myId) { 
@@ -211,14 +402,15 @@
                     dot.className = `status-dot ${user.status === 'playing' ? 'playing' : ''}`;
                     
                     const nameSpan = document.createElement('span');
-                    nameSpan.innerText = `کاربر ${user.id}`;
+                    nameSpan.className = 'user-name';
+                    nameSpan.innerText = `بازیکن ${user.id}`;
                     
                     infoDiv.appendChild(dot);
                     infoDiv.appendChild(nameSpan);
                     
                     const btn = document.createElement('button');
                     btn.className = 'btn-request';
-                    btn.innerText = user.status === 'playing' ? 'در حال بازی' : 'درخواست بازی';
+                    btn.innerText = user.status === 'playing' ? 'مشغول' : 'بازی';
                     btn.disabled = user.status === 'playing';
                     btn.onclick = () => sendRequest(user.id);
                     
@@ -227,16 +419,15 @@
                     list.appendChild(li);
                 }
             });
-
             if (!hasOtherUsers) {
-                list.innerHTML = '<li style="justify-content: center; color: #94a3b8;">هیچ کاربر دیگری آنلاین نیست. منتظر بمانید...</li>';
+                list.innerHTML = '<li style="justify-content: center; color: var(--text-secondary);">هیچ کاربر دیگری آنلاین نیست. منتظر بمانید...</li>';
             }
         });
 
         function sendRequest(targetId) {
             opponentId = targetId;
             socket.emit('request-connect', targetId);
-            document.getElementById('status').innerText = "در حال ارسال درخواست...";
+            document.querySelector('.action-desc').innerText = `در حال ارسال درخواست به بازیکن ${targetId}...`;
         }
 
         socket.on('incoming-request', (data) => {
@@ -249,7 +440,6 @@
             document.getElementById('request-modal').classList.add('hidden');
             socket.emit('accept-connect', opponentId);
         }
-
         function rejectRequest() {
             document.getElementById('request-modal').classList.add('hidden');
             socket.emit('reject-connect', opponentId);
@@ -257,15 +447,15 @@
         }
 
         socket.on('request-rejected', () => {
-            document.getElementById('status').innerText = "درخواست شما رد شد.";
+            document.querySelector('.action-desc').innerText = "درخواست شما رد شد.";
         });
-
         socket.on('error-msg', (msg) => {
             alert(msg);
-            document.getElementById('status').innerText = msg;
+            document.querySelector('.action-desc').innerText = msg;
         });
 
         socket.on('game-started', (data) => {
+            document.getElementById('lobby-header').classList.add('hidden');
             document.getElementById('lobby-screen').classList.add('hidden');
             document.getElementById('game-area').classList.remove('hidden');
             document.getElementById('controls').classList.remove('hidden');
@@ -287,7 +477,6 @@
             alert(`بازی تمام شد! ${data.winner === myId ? 'شما برنده شدید! 🎉' : 'حریف برنده شد! 😢'}`);
             location.reload();
         });
-
         socket.on('opponent-disconnected', () => {
             alert("حریف از بازی خارج شد! شما برنده شدید. 🎉");
             location.reload();
@@ -308,6 +497,7 @@
             updateUI();
         });
 
+        // ... (توابع تاس، حرکت و WebRTC دقیقاً مثل قبل) ...
         function updateDiceDisplay(number) {
             const dots = ['d1','d2','d3','d4','d5','d6','d7','d8','d9'];
             dots.forEach(d => document.getElementById(d).classList.remove('visible'));
@@ -325,7 +515,6 @@
 
             let canMove = false;
             const myPieces = pieces[myPlayerNumber];
-            
             if (currentDice === 6 && myPieces.includes(-1)) { canMove = true; } 
             else {
                 for (let pos of myPieces) {
@@ -334,244 +523,4 @@
             }
 
             if (canMove) {
-                document.getElementById('game-msg').innerText = `شما ${currentDice} آوردید. یک مهره انتخاب کنید.`;
-                updateUI(); 
-            } else {
-                document.getElementById('game-msg').innerText = `شما ${currentDice} آوردید. حرکتی ممکن نیست!`;
-                setTimeout(() => { socket.emit('end-turn', { dice: 1 }); }, 1500);
-            }
-        }
-
-        socket.on('opponent-dice', (data) => {
-            updateDiceDisplay(data.dice);
-            document.getElementById('game-msg').innerText = `حریف ${data.dice} آورد.`;
-        });
-
-        function selectPiece(pieceIndex) {
-            if (!isMyTurn || !hasRolled) return;
-            const currentPos = pieces[myPlayerNumber][pieceIndex];
-
-            if (currentPos === -1 && currentDice !== 6) return; 
-            if (currentPos !== -1 && currentPos !== totalPathLength && currentPos + currentDice > totalPathLength) return; 
-
-            let newPos = (currentPos === -1) ? 0 : currentPos + currentDice;
-            if (newPos > totalPathLength) newPos = totalPathLength;
-
-            pieces[myPlayerNumber][pieceIndex] = newPos;
-
-            let opponentPlayerNum = (myPlayerNumber === 1) ? 2 : 1;
-            let killedPieceIndex = -1;
-
-            if (newPos < totalPathLength && newPos >= 0) {
-                pieces[opponentPlayerNum].forEach((oppPos, oppIndex) => {
-                    if (oppPos === newPos) {
-                        pieces[opponentPlayerNum][oppIndex] = -1;
-                        killedPieceIndex = oppIndex;
-                    }
-                });
-            }
-
-            socket.emit('make-move', { 
-                player: myPlayerNumber, pieceIndex: pieceIndex, newPos: newPos,
-                killed: { player: opponentPlayerNum, pieceIndex: killedPieceIndex, newPos: -1 }
-            });
-
-            let winCount = pieces[myPlayerNumber].filter(p => p === totalPathLength).length;
-            if (winCount === 3) { socket.emit('end-turn', { winner: myPlayerNumber }); return; }
-
-            if (currentDice === 6) socket.emit('end-turn', { dice: 6 }); 
-            else socket.emit('end-turn', { dice: 1 }); 
-        }
-
-        socket.on('opponent-move', (data) => {
-            pieces[data.player][data.pieceIndex] = data.newPos;
-            if (data.killed && data.killed.pieceIndex !== -1) {
-                pieces[data.killed.player][data.killed.pieceIndex] = -1;
-            }
-            updateUI();
-        });
-
-        function updateUI() {
-            document.querySelectorAll('.piece').forEach(p => p.remove());
-            for (let p = 1; p <= 2; p++) {
-                const currentPath = (p === 1) ? pathP1 : pathP2;
-                pieces[p].forEach((pos, index) => {
-                    if (pos !== -1) {
-                        let cellIndex = (pos >= currentPath.length) ? currentPath[currentPath.length - 1] : currentPath[pos];
-                        const cell = document.querySelector(`.cell[data-index="${cellIndex}"]`);
-                        if (cell) {
-                            const pieceDiv = document.createElement('div');
-                            pieceDiv.classList.add('piece', `p${p}`);
-                            if (pos >= totalPathLength) pieceDiv.classList.add('finished');
-                            if (p === myPlayerNumber && isMyTurn && hasRolled) {
-                                if ((pos === -1 && currentDice === 6) || (pos !== totalPathLength && pos + currentDice <= totalPathLength)) pieceDiv.classList.add('highlight');
-                            }
-                            if (p === myPlayerNumber) pieceDiv.onclick = () => selectPiece(index);
-                            cell.appendChild(pieceDiv);
-                        }
-                    }
-                });
-            }
-            updateHomePieces();
-        }
-
-        function updateHomePieces() {
-            for (let p = 1; p <= 2; p++) {
-                const container = document.getElementById(`home-pieces-p${p}`);
-                container.innerHTML = '';
-                pieces[p].forEach((pos, index) => {
-                    if (pos === -1) {
-                        const hp = document.createElement('div');
-                        hp.classList.add('home-piece', `p${p}`);
-                        if (p === myPlayerNumber && isMyTurn && hasRolled && currentDice === 6) {
-                            hp.classList.add('highlight');
-                            hp.onclick = () => selectPiece(index);
-                        }
-                        container.appendChild(hp);
-                    }
-                });
-            }
-        }
-
-        // WebRTC
-        let localStream = null;
-        let peerConnection = null;
-        let isCamActive = false;
-        let isMicActive = false;
-
-        const configuration = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
-
-        async function toggleCam() {
-            const camBtn = document.getElementById('cam-btn');
-            const videoContainer = document.getElementById('video-container');
-            const localVideo = document.getElementById('local-video');
-
-            if (!isCamActive) {
-                try {
-                    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                    localVideo.srcObject = localStream;
-                    videoContainer.classList.remove('hidden');
-                    camBtn.classList.add('active');
-                    isCamActive = true;
-                    isMicActive = true; 
-                    document.getElementById('mic-btn').classList.add('active');
-
-                    if (!peerConnection) createPeerConnection();
-                    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-
-                    const offer = await peerConnection.createOffer();
-                    await peerConnection.setLocalDescription(offer);
-                    socket.emit('webrtc-signal', { type: 'offer', sdp: offer });
-                } catch (err) { alert("دسترسی به دوربین امکان‌پذیر نیست."); }
-            } else {
-                if (localStream) localStream.getTracks().forEach(track => track.stop());
-                localStream = null;
-                localVideo.srcObject = null;
-                videoContainer.classList.add('hidden');
-                camBtn.classList.remove('active');
-                isCamActive = false;
-                isMicActive = false;
-                document.getElementById('mic-btn').classList.remove('active');
-                if (peerConnection) { peerConnection.close(); peerConnection = null; }
-            }
-        }
-
-        async function toggleMic() {
-            const micBtn = document.getElementById('mic-btn');
-            if (!isMicActive) {
-                try {
-                    localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    micBtn.classList.add('active');
-                    isMicActive = true;
-                    if (!peerConnection) createPeerConnection();
-                    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-                    const offer = await peerConnection.createOffer();
-                    await peerConnection.setLocalDescription(offer);
-                    socket.emit('webrtc-signal', { type: 'offer', sdp: offer });
-                } catch (err) { alert("دسترسی به میکروفون امکان‌پذیر نیست."); }
-            } else {
-                if (localStream) localStream.getTracks().forEach(track => track.stop());
-                localStream = null;
-                micBtn.classList.remove('active');
-                isMicActive = false;
-                if (peerConnection) { peerConnection.close(); peerConnection = null; }
-            }
-        }
-
-        function createPeerConnection() {
-            peerConnection = new RTCPeerConnection(configuration);
-            peerConnection.ontrack = (event) => {
-                document.getElementById('remote-video').srcObject = event.streams[0];
-            };
-            peerConnection.onicecandidate = (event) => {
-                if (event.candidate) {
-                    socket.emit('webrtc-signal', { type: 'candidate', candidate: event.candidate });
-                }
-            };
-        }
-
-        socket.on('webrtc-signal', async (data) => {
-            if (!peerConnection) createPeerConnection();
-            if (data.type === 'offer') {
-                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
-                const answer = await peerConnection.createAnswer();
-                await peerConnection.setLocalDescription(answer);
-                socket.emit('webrtc-signal', { type: 'answer', sdp: answer });
-                document.getElementById('video-container').classList.remove('hidden');
-            } 
-            else if (data.type === 'answer') {
-                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
-            } 
-            else if (data.type === 'candidate') {
-                await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
-            }
-        });
-
-        // ==========================================
-        // 🚨 قابلیت جابه‌جایی کادر ویدیو
-        // ==========================================
-        const dragElement = document.getElementById('video-container');
-        let isDragging = false;
-        let startX, startY, initialLeft, initialTop;
-
-        dragElement.addEventListener('pointerdown', (e) => {
-            isDragging = true;
-            dragElement.setPointerCapture(e.pointerId);
-            const rect = dragElement.getBoundingClientRect();
-            startX = e.clientX;
-            startY = e.clientY;
-            initialLeft = rect.left;
-            initialTop = rect.top;
-            dragElement.style.cursor = 'grabbing';
-        });
-
-        dragElement.addEventListener('pointermove', (e) => {
-            if (!isDragging) return;
-            const dx = e.clientX - startX;
-            const dy = e.clientY - startY;
-            let newLeft = initialLeft + dx;
-            let newTop = initialTop + dy;
-            const maxLeft = window.innerWidth - dragElement.offsetWidth;
-            const maxTop = window.innerHeight - dragElement.offsetHeight;
-            if (newLeft < 0) newLeft = 0;
-            if (newTop < 0) newTop = 0;
-            if (newLeft > maxLeft) newLeft = maxLeft;
-            if (newTop > maxTop) newTop = maxTop;
-            dragElement.style.left = newLeft + 'px';
-            dragElement.style.top = newTop + 'px';
-            dragElement.style.right = 'auto';
-        });
-
-        dragElement.addEventListener('pointerup', (e) => {
-            if (!isDragging) return;
-            isDragging = false;
-            dragElement.releasePointerCapture(e.pointerId);
-            dragElement.style.cursor = 'grab';
-        });
-
-        dragElement.addEventListener('pointercancel', (e) => {
-            isDragging = false;
-        });
-    </script>
-</body>
-</html>
+                document.getElementById('game-msg').innerText = `شما ${currentDice} آوردید. یک
