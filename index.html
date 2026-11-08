@@ -19,12 +19,12 @@
         body { background: var(--bg-color); color: var(--text-color); display: flex; flex-direction: column; min-height: 100vh; overflow-x: hidden; transition: background 0.3s, color 0.3s; }
         .hidden { display: none !important; }
         
-        /* 🚨 هدر اصلی (برگشت) */
+        /* هدر */
         .header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: var(--header-bg); box-shadow: 0 2px 10px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 50; border-bottom: 1px solid var(--border-color); }
         .header-title { font-size: 18px; font-weight: bold; color: var(--text-color); }
         .menu-btn { background: transparent; border: none; color: var(--text-muted); font-size: 28px; cursor: pointer; width: auto; padding: 0 10px; box-shadow: none; }
         
-        /* منوی تنظیمات (آیدی و تم) */
+        /* منوی تنظیمات */
         #settings-menu { position: absolute; top: 60px; left: 20px; background: var(--card-bg); border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 250px; z-index: 100; border: 1px solid var(--border-color); overflow: hidden; }
         .settings-item { padding: 15px; border-bottom: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 5px; }
         .settings-label { font-size: 12px; color: var(--text-muted); }
@@ -96,7 +96,7 @@
         #remote-video, #local-video { width: 100%; height: 50%; object-fit: cover; background: #1e293b; pointer-events: none; }
         #local-video { transform: scaleX(-1); }
 
-        /* 🚨 دکمه چت (سبز و سه بعدی) */
+        /* 🚨 دکمه چت سه بعدی */
         #chat-btn {
             display: flex; justify-content: center; align-items: center;
             background: linear-gradient(145deg, #05a648, #06C755);
@@ -112,8 +112,9 @@
             box-shadow: inset 2px 2px 5px rgba(0,0,0,0.5), inset -1px -1px 3px rgba(255,255,255,0.2);
             transform: scale(0.95);
         }
+        #chat-btn.hidden { display: none; }
 
-        /* کادر چت (قابل جابه‌جایی) */
+        /* کادر چت */
         #chat-modal {
             position: fixed; top: 100px; left: 50px; 
             width: 300px; height: 400px;
@@ -138,13 +139,13 @@
 </head>
 <body>
 
-    <!-- هدر اصلی (با آیدی ثابت در منو) -->
+    <!-- هدر اصلی (لابی) -->
     <div class="header" id="lobby-header">
         <div class="header-title">منچ آنلاین</div>
         <button class="menu-btn" onclick="toggleSettings()">⋮</button>
     </div>
 
-    <!-- منوی تنظیمات (آیدی و تم) -->
+    <!-- منوی تنظیمات -->
     <div id="settings-menu" class="hidden">
         <div class="settings-item"><span class="settings-label">نام کاربری</span><span class="settings-name" id="settings-username">بازیکن مهمان</span></div>
         <div class="settings-item"><span class="settings-label">آیدی ثابت شما</span><span class="settings-value" id="settings-id">...</span></div>
@@ -164,7 +165,7 @@
         </div>
     </div>
 
-    <!-- درخواست بازی -->
+    <!-- مودال درخواست بازی -->
     <div id="request-modal" class="hidden">
         <div class="modal-content">
             <h3 style="margin-bottom: 15px; color: #fbbf24; font-size: 22px;">📩 درخواست بازی!</h3>
@@ -196,6 +197,7 @@
         </div>
     </div>
 
+    <!-- کادر ویدیو و کنترل‌ها -->
     <div id="video-container" class="hidden">
         <video id="remote-video" autoplay playsinline></video>
         <video id="local-video" autoplay playsinline muted></video>
@@ -437,10 +439,13 @@
         socket.on('error-msg', (msg) => { alert(msg); document.querySelector('.action-desc').innerText = msg; });
 
         socket.on('game-started', (data) => {
+            // 🚨 هدر و لابی رو مخفی می‌کنیم و بازی رو نشون می‌دیم
             document.getElementById('lobby-header').classList.add('hidden');
             document.getElementById('lobby-screen').classList.add('hidden');
             document.getElementById('game-area').classList.remove('hidden');
             document.getElementById('controls').classList.remove('hidden');
+            
+            // نمایش دکمه چت بالای بازی
             document.getElementById('chat-btn').classList.remove('hidden');
 
             if (data.requester === myId) { myPlayerNumber = 1; } else { myPlayerNumber = 2; }
