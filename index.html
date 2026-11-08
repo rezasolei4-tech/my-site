@@ -19,12 +19,10 @@
         body { background: var(--bg-color); color: var(--text-color); display: flex; flex-direction: column; min-height: 100vh; overflow-x: hidden; transition: background 0.3s, color 0.3s; }
         .hidden { display: none !important; }
         
-        /* 🚨 هدر بالا (لابی) */
+        /* هدر و منوی تنظیمات */
         .header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: var(--header-bg); box-shadow: 0 2px 10px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 50; border-bottom: 1px solid var(--border-color); }
         .header-title { font-size: 18px; font-weight: bold; color: var(--text-color); }
         .menu-btn { background: transparent; border: none; color: var(--text-muted); font-size: 28px; cursor: pointer; width: auto; padding: 0 10px; box-shadow: none; }
-        
-        /* منوی سه نقطه (تنظیمات) */
         #settings-menu { position: absolute; top: 60px; left: 20px; background: var(--card-bg); border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 250px; z-index: 100; border: 1px solid var(--border-color); overflow: hidden; }
         .settings-item { padding: 15px; border-bottom: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 5px; }
         .settings-label { font-size: 12px; color: var(--text-muted); }
@@ -34,7 +32,7 @@
         .theme-toggle:hover { color: #06C755; }
         .theme-icon { font-size: 20px; }
 
-        /* 🚨 لابی */
+        /* لابی */
         .main-content { padding: 20px; display: flex; flex-direction: column; gap: 15px; max-width: 500px; margin: 0 auto; width: 100%; }
         .accordion { background: var(--card-bg); border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color); }
         .accordion-header { padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: var(--card-bg); }
@@ -57,7 +55,7 @@
         .action-desc { font-size: 14px; color: var(--text-muted); margin-bottom: 20px; line-height: 1.6; }
         .btn-main-action { background: var(--btn-bg); color: white; border: none; padding: 15px; border-radius: 12px; font-size: 18px; font-weight: bold; cursor: pointer; width: 100%; transition: 0.2s; display: flex; justify-content: center; align-items: center; gap: 10px; }
 
-        /* 🚨 مودال، زمین، تاس و ... */
+        /* مودال و زمین و تاس */
         #request-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000; }
         .modal-content { background: var(--card-bg); padding: 25px; border-radius: 20px; text-align: center; width: 85%; max-width: 320px; border: 1px solid var(--border-color); }
         .modal-content button { margin-top: 15px; margin-right: 5px; width: 45%; display: inline-block; padding: 12px; border-radius: 10px; font-weight: bold; border: none; cursor: pointer; }
@@ -88,7 +86,7 @@
         #turn-text { font-size: 16px; font-weight: bold; color: #fbbf24; margin-bottom: 10px; text-align: center; }
         #game-msg { color: var(--text-muted); font-size: 14px; margin-bottom: 10px; text-align: center; min-height: 20px; }
 
-        /* 🚨 کنترل‌ها و ویدیو */
+        /* کنترل‌ها و ویدیو */
         #controls { position: fixed; bottom: 20px; left: 20px; display: flex; gap: 10px; z-index: 100; }
         .control-btn { width: 55px; height: 55px; border-radius: 50%; font-size: 26px; background: var(--card-bg); border: 2px solid var(--border-color); cursor: pointer; display: flex; align-items: center; justify-content: center; }
         .control-btn.active { background: #ef4444; border-color: #fca5a5; animation: pulse 1.5s infinite; }
@@ -96,35 +94,14 @@
         #remote-video, #local-video { width: 100%; height: 50%; object-fit: cover; background: #1e293b; pointer-events: none; }
         #local-video { transform: scaleX(-1); }
 
-        /* 🚨 دکمه چت (سبز و سه بعدی) */
-        #chat-btn {
-            display: flex; justify-content: center; align-items: center;
-            background: linear-gradient(145deg, #05a648, #06C755);
-            border: none; border-radius: 12px;
-            color: white; font-size: 22px; font-weight: bold;
-            width: 45px; height: 45px;
-            box-shadow: 3px 3px 8px rgba(0,0,0,0.4), -2px -2px 5px rgba(255,255,255,0.2), inset 0 0 10px rgba(255,255,255,0.1);
-            cursor: pointer; transition: 0.2s;
-            position: absolute; right: 20px; top: 10px;
-            z-index: 150;
-        }
-        #chat-btn:active {
-            box-shadow: inset 2px 2px 5px rgba(0,0,0,0.5), inset -1px -1px 3px rgba(255,255,255,0.2);
-            transform: scale(0.95);
-        }
+        /* دکمه چت */
+        #chat-btn { display: flex; justify-content: center; align-items: center; background: linear-gradient(145deg, #05a648, #06C755); border: none; border-radius: 12px; color: white; font-size: 22px; font-weight: bold; width: 45px; height: 45px; box-shadow: 3px 3px 8px rgba(0,0,0,0.4), -2px -2px 5px rgba(255,255,255,0.2), inset 0 0 10px rgba(255,255,255,0.1); cursor: pointer; transition: 0.2s; position: absolute; right: 20px; top: 10px; z-index: 150; }
+        #chat-btn:active { box-shadow: inset 2px 2px 5px rgba(0,0,0,0.5), inset -1px -1px 3px rgba(255,255,255,0.2); transform: scale(0.95); }
         #chat-btn.hidden { display: none; }
 
         /* کادر چت */
-        #chat-modal {
-            position: fixed; top: 100px; left: 50px; 
-            width: 300px; height: 400px;
-            background: var(--card-bg); border-radius: 15px; border: 1px solid var(--border-color);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column;
-            z-index: 150; overflow: hidden;
-            cursor: grab; touch-action: none; transition: opacity 0.2s;
-        }
+        #chat-modal { position: fixed; top: 100px; left: 50px; width: 300px; height: 400px; background: var(--card-bg); border-radius: 15px; border: 1px solid var(--border-color); box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column; z-index: 150; overflow: hidden; cursor: grab; touch-action: none; transition: opacity 0.2s; }
         #chat-modal:active { cursor: grabbing; opacity: 0.9; }
-        
         .chat-header { padding: 12px; background: var(--header-bg); color: var(--text-color); font-weight: bold; display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); }
         .chat-close { cursor: pointer; color: #ef4444; font-size: 18px; }
         #chat-messages { flex: 1; padding: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; background: var(--bg-color); }
@@ -135,11 +112,14 @@
         #chat-input { flex: 1; padding: 10px; border-radius: 20px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-color); outline: none; }
         #chat-send { background: var(--btn-bg); border: none; width: 40px; height: 40px; border-radius: 50%; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; }
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+
+        /* 🚨 کادر دیباگ (نمایش خطاها) */
+        #debug-box { position: fixed; bottom: 10px; right: 10px; background: rgba(0,0,0,0.8); color: #00ff00; font-size: 12px; padding: 5px; z-index: 9999; border-radius: 5px; max-width: 200px; word-wrap: break-word; }
     </style>
 </head>
 <body>
 
-    <!-- 🚨 هدر بالا (لابی) -->
+    <!-- هدر -->
     <div class="header" id="lobby-header">
         <div class="header-title">منچ آنلاین</div>
         <button class="menu-btn" onclick="toggleSettings()">⋮</button>
@@ -179,9 +159,7 @@
 
     <!-- صفحه بازی -->
     <div id="game-area" class="hidden" style="display: flex; flex-direction: column; align-items: center; width: 100%; padding: 10px;">
-        <!-- 🚨 دکمه چت -->
         <button id="chat-btn" class="hidden" onclick="toggleChat()">💬</button>
-
         <div id="turn-text">نوبت شماست!</div>
         <div class="home-pieces" id="home-pieces-p1"></div>
         <div class="home-pieces" id="home-pieces-p2"></div>
@@ -202,7 +180,6 @@
         <video id="remote-video" autoplay playsinline></video>
         <video id="local-video" autoplay playsinline muted></video>
     </div>
-
     <div id="controls" class="hidden">
         <div id="mic-btn" class="control-btn" onclick="toggleMic()">🎤</div>
         <div id="cam-btn" class="control-btn" onclick="toggleCam()">📷</div>
@@ -221,7 +198,20 @@
         </div>
     </div>
 
+    <!-- 🚨 کادر دیباگ (فقط برای دیدن خطاها) -->
+    <div id="debug-box">در حال اتصال...</div>
+
     <script>
+        // ==========================================
+        // 🚨 سیستم دیباگ
+        // ==========================================
+        const debugBox = document.getElementById('debug-box');
+        function logDebug(msg, isError = false) {
+            console.log(msg);
+            debugBox.innerText = msg;
+            debugBox.style.color = isError ? '#ff4444' : '#00ff00';
+        }
+
         // ==========================================
         // 🚨 چت
         // ==========================================
@@ -233,32 +223,26 @@
                 loadChatHistory();
             }
         }
-
         function handleChatEnter(e) { if (e.key === 'Enter') sendChatMessage(); }
-
         function sendChatMessage() {
             const input = document.getElementById('chat-input');
             const text = input.value.trim();
             if (text === "") return;
-            
             saveChatMessage(text, 'me');
             addChatMessageToDOM(text, 'me');
             socket.emit('chat-message', text);
             input.value = '';
         }
-
         socket.on('chat-message', (text) => {
             saveChatMessage(text, 'other');
             addChatMessageToDOM(text, 'other');
         });
-
         function saveChatMessage(text, sender) {
             let history = JSON.parse(localStorage.getItem('manchChatHistory')) || [];
             history.push({ text: text, sender: sender, time: Date.now() });
             if (history.length > 50) history = history.slice(-50);
             localStorage.setItem('manchChatHistory', JSON.stringify(history));
         }
-
         function addChatMessageToDOM(text, sender) {
             const messagesDiv = document.getElementById('chat-messages');
             const msgDiv = document.createElement('div');
@@ -267,19 +251,15 @@
             messagesDiv.appendChild(msgDiv);
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
         }
-
         function loadChatHistory() {
             const messagesDiv = document.getElementById('chat-messages');
             messagesDiv.innerHTML = '';
             let history = JSON.parse(localStorage.getItem('manchChatHistory')) || [];
             history.forEach(msg => addChatMessageToDOM(msg.text, msg.sender));
         }
-
-        // جابه‌جایی کادر چت
         const chatModal = document.getElementById('chat-modal');
         let isDraggingChat = false;
         let chatStartX, chatStartY, chatInitialLeft, chatInitialTop;
-
         chatModal.addEventListener('pointerdown', (e) => {
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.classList.contains('chat-close')) return;
             isDraggingChat = true;
@@ -289,7 +269,6 @@
             chatInitialLeft = rect.left; chatInitialTop = rect.top;
             chatModal.style.cursor = 'grabbing';
         });
-
         chatModal.addEventListener('pointermove', (e) => {
             if (!isDraggingChat) return;
             const dx = e.clientX - chatStartX; const dy = e.clientY - chatStartY;
@@ -300,7 +279,6 @@
             if (newLeft > maxLeft) newLeft = maxLeft; if (newTop > maxTop) newTop = maxTop;
             chatModal.style.left = newLeft + 'px'; chatModal.style.top = newTop + 'px'; chatModal.style.right = 'auto';
         });
-
         chatModal.addEventListener('pointerup', (e) => {
             if (!isDraggingChat) return;
             isDraggingChat = false;
@@ -310,7 +288,7 @@
         chatModal.addEventListener('pointercancel', (e) => { isDraggingChat = false; });
 
         // ==========================================
-        // بقیه منطق بازی
+        // منطق بازی
         // ==========================================
         function toggleTheme() {
             document.body.classList.toggle('light-mode');
@@ -342,7 +320,18 @@
             if (!id) { id = Math.floor(1000 + Math.random() * 9000).toString(); localStorage.setItem('manchPlayerId', id); }
             return id;
         }
+        
         const socket = io("https://manch-server.onrender.com");
+        
+        // 🚨 اتصال به سرور و دیباگ
+        socket.on('connect', () => { 
+            logDebug("متصل به سرور شد!");
+            socket.emit('register-user', myId); 
+        });
+        
+        socket.on('connect_error', (err) => { logDebug("خطای اتصال: " + err.message, true); });
+        socket.on('connect_timeout', () => { logDebug("اتصال تایم‌اوت شد.", true); });
+
         let myId = getPersistentId(); 
         let isMyTurn = false;
         let myPlayerNumber = 1; 
@@ -376,20 +365,14 @@
             board.appendChild(cell);
         }
 
-        socket.on('connect', () => { 
-            console.log("متصل به سرور شد!");
-            socket.emit('register-user', myId); 
-        });
-        
         socket.on('your-id', (id) => { 
             myId = id; 
             document.getElementById('settings-id').innerText = id; 
             document.getElementById('settings-username').innerText = "بازیکن " + id;
         });
 
-        // 🚨 دریافت لیست کاربران آنلاین
         socket.on('online-users-list', (users) => {
-            console.log("لیست کاربران دریافت شد:", users);
+            logDebug("لیست کاربران دریافت شد.");
             const list = document.getElementById('users-list');
             list.innerHTML = ''; 
             let hasOtherUsers = false;
@@ -445,6 +428,7 @@
         socket.on('error-msg', (msg) => { alert(msg); document.querySelector('.action-desc').innerText = msg; });
 
         socket.on('game-started', (data) => {
+            logDebug("بازی شروع شد!");
             document.getElementById('lobby-header').classList.add('hidden');
             document.getElementById('lobby-screen').classList.add('hidden');
             document.getElementById('game-area').classList.remove('hidden');
